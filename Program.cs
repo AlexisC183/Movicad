@@ -1,8 +1,11 @@
-
+using Movicad.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://localhost:5000");
+
+builder.Services.AddDbContext<MovicadContext>();
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
