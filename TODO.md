@@ -1,3 +1,1 @@
 # TEST
-Users
-Sessions
