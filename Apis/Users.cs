@@ -1,5 +1,10 @@
+using BC = BCrypt.Net.BCrypt;
 using Movicad.Persistence;
+using Movicad.Utils;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Movicad.Apis;
 
@@ -12,6 +17,9 @@ public static class Users
         string Role
     );
 
+    /// <summary>
+    /// POST
+    /// </summary>
     public static async Task Create(HttpContext http, MovicadContext db, CreateReq req)
     {
         if (req.Id.Length == 0)
@@ -105,11 +113,71 @@ public static class Users
             return;
         }
 
-        string lowerKey = req.Id.ToLower();
         User user = new()
         {
-            Key = lowerKey,
-
+            Key = req.Id.ToLower(),
+            Role = req.Role,
+            Password = BC.HashPassword(req.Password),
+            Creation = DateTime.UtcNow
         };
+
+        if (req.Role == "estudiante")
+        {
+            Student studentData = new()
+            {
+                Name = "",
+                Icon = new byte[] {},
+                IconMediaType = "image/gif"
+            };
+            user.Student = studentData;
+        }
+        if (req.Role == "administrativo")
+        {
+            Administrative administrativeData = new()
+            {
+                Name = "",
+                Acronym = "",
+                Type = "publica",
+                Website = "",
+                Icon = new byte[] {},
+                IconMediaType = "image/gif"
+            };
+            user.Administrative = administrativeData;
+        }
+
+        try
+        {
+            if (db.Users.Any(u => u.Key == user.Key))
+            {
+                http.Response.StatusCode = 500;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Intentar un identificador único diferente"
+                });
+                return;
+            }
+
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+
+            List<Claim> claims = [
+                new(ClaimTypes.NameIdentifier, user.Key),
+                new(ClaimTypes.Role, user.Role)
+            ];
+
+            await http.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new(new ClaimsIdentity(claims, "password")),
+                new() { IsPersistent = true }
+            );
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }

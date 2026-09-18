@@ -1,8 +1,17 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Movicad.Apis;
 using Movicad.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://localhost:5000");
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(opts =>
+    {
+        opts.ExpireTimeSpan = TimeSpan.FromDays(1);
+        opts.SlidingExpiration = false;
+    });
 
 builder.Services.AddDbContext<MovicadContext>();
 
@@ -10,10 +19,17 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+app.UseAuthentication();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/api", () => "Espacio para probar la API REST"); //
+
+app.MapPost("/api/sessions/log-in", Sessions.LogIn);
+app.MapGet("/api/sessions/log-out", Sessions.LogOut);
+app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);
+
+app.MapPost("/api/users/create", Users.Create);
 
 app.MapFallbackToFile("index.html");
 
