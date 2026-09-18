@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body style="background: #121314; color: white; font-family: sans-serif;">
+    <h1>Page to test the REST API</h1>
+    <h2>Available functions</h2>
+    <ul>
+        <li>get(url)</li>
+        <li>post(url, jso)</li>
+    </ul>
+</body>
+<script>
+    function get(url) {
+        fetch(url)
+            .then(r => r.json())
+            .then(console.log);
+    }
+
+    function post(url, jso) {
+        fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(jso),
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(r => r.json())
+            .then(console.log);
+    }
+</script>
+</html>

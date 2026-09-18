@@ -23,7 +23,12 @@ app.UseAuthentication();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/api", () => "Espacio para probar la API REST"); //
+app.MapGet("/api", () =>
+{
+    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "index.html");
+
+    return Results.File(filePath, "text/html");
+}); //
 
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
 app.MapGet("/api/sessions/log-out", Sessions.LogOut);
