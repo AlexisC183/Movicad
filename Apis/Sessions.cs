@@ -16,7 +16,7 @@ public static class Sessions
     /// </summary>
     public static async Task LogIn(HttpContext http, MovicadContext db, LogInReq req)
     {
-        string key = req.Id.ToLower();
+        string key = req.Id.Trim().ToLower();
 
         try
         {
