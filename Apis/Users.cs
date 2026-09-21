@@ -102,7 +102,7 @@ public static class Users
             });
             return;
         }
-        if (req.Role is not ("estudiante" or "administrativo"))
+        if (req.Role is not (Roles.Student or Roles.Administrative))
         {
             http.Response.StatusCode = 400;
             await http.Response.WriteAsJsonAsync(new
@@ -121,7 +121,7 @@ public static class Users
             Creation = DateTime.UtcNow
         };
 
-        if (req.Role == "estudiante")
+        if (req.Role == Roles.Student)
         {
             Student studentData = new()
             {
@@ -131,7 +131,7 @@ public static class Users
             };
             user.Student = studentData;
         }
-        if (req.Role == "administrativo")
+        if (req.Role == Roles.Administrative)
         {
             Administrative administrativeData = new()
             {

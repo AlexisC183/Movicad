@@ -25,11 +25,7 @@ public static class HttpExtensions
         if (roleClaim is null || !allowedRoles.Contains(roleClaim.Value))
         {
             http.Response.StatusCode = 403;
-            await http.Response.WriteAsJsonAsync(new
-            {
-                Status = "err",
-                Message = "Permiso denegado"
-            });
+            await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
             
             return null;
         }
