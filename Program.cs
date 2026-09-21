@@ -30,6 +30,8 @@ app.MapGet("/api", () =>
     return Results.File(filePath, "text/html");
 }); //
 
+app.MapPost("/api/calls-for/create", CallForDelegates.Create);
+
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
 app.MapGet("/api/sessions/log-out", Sessions.LogOut);
 app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);

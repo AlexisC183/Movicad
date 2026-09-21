@@ -1,5 +1,6 @@
 using Movicad.Persistence;
 using Movicad.Utils;
+using System.Security.Cryptography;
 
 namespace Movicad.Apis;
 
@@ -96,7 +97,40 @@ public static class CallForDelegates
 
         try
         {
-            
+            DateTime now = DateTime.UtcNow;
+            User user = db.Users.Single(user => user.Key == idRolePair.Id);
+            ICollection<DestinationCountry> destinationCountries = db.Countries
+                .Join(
+                    req.DestinationCountries,
+                    country => country.Name,
+                    name => name,
+                    (country, _) => country
+                )
+                .Select(country => new DestinationCountry()
+                {
+                    CountryId = country.CountryId
+                })
+                .ToList();
+
+            CallsFor callFor = new()
+            {
+                Key = RandomNumberGenerator.GetHexString(32),
+                Title = trimmedTitle,
+                InitialDate = initialDateUtc,
+                FinalDate = finalDateUtc,
+                Description = trimmedDescription,
+                Requirements = trimmedRequirements,
+                PublishDate = now,
+                Modification = now,
+                AdministrativeId = user.UserId,
+                DestinationCountries = destinationCountries
+            };
+
+            db.CallsFors.Add(callFor);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
         }
         catch (Exception e)
         {

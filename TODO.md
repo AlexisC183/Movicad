@@ -1,4 +1,4 @@
 # TODO
-db insert at CallForDelegates.Create
+Document ("/api/calls-for/create", CallForDelegates.Create)
 
 # TEST
