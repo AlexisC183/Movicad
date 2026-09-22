@@ -20,8 +20,10 @@ public static class Users
     /// <summary>
     /// POST
     /// </summary>
-    public static async Task Create(HttpContext http, MovicadContext db, CreateReq req)
+    public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
+        CreateReq req = new(r.Id ?? "", r.Password ?? "", r.Password1 ?? "", r.Role ?? "");
+
         if (req.Id.Length == 0)
         {
             http.Response.StatusCode = 400;

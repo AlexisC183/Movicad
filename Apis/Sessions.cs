@@ -14,8 +14,9 @@ public static class Sessions
     /// <summary>
     /// POST
     /// </summary>
-    public static async Task LogIn(HttpContext http, MovicadContext db, LogInReq req)
+    public static async Task LogIn(HttpContext http, MovicadContext db, LogInReq r)
     {
+        LogInReq req = new(r.Id ?? "", r.Password ?? "");
         string key = req.Id.Trim().ToLower();
 
         try

@@ -1,10 +1,25 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Movicad.Apis;
 using Movicad.Persistence;
+using Movicad.Utils;
 
+int maxReqBodySize = 250 * StorageConstants.Megabyte;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls("http://localhost:5000");
+
+builder.Services.Configure<KestrelServerOptions>(opts =>
+{
+    opts.Limits.MaxRequestBodySize = maxReqBodySize;
+});
+
+builder.Services.Configure<FormOptions>(opts =>
+{
+    opts.MultipartBodyLengthLimit = maxReqBodySize;
+    opts.ValueLengthLimit = maxReqBodySize;
+});
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(opts =>
@@ -29,6 +44,15 @@ app.MapGet("/api", () =>
 
     return Results.File(filePath, "text/html");
 }); //
+
+app.MapPost("/test", () =>
+{
+
+
+    return "{}";
+}); //
+
+app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create);
 
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 

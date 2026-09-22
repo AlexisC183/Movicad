@@ -18,7 +18,7 @@ public static class CallForDelegates
     /// <summary>
     /// POST
     /// </summary>
-    public static async Task Create(HttpContext http, MovicadContext db, CreateReq req)
+    public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
         IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
 
@@ -27,6 +27,14 @@ public static class CallForDelegates
             return;
         }
 
+        CreateReq req = new(
+            r.Title ?? "",
+            r.Description ?? "",
+            r.Requirements ?? "",
+            r.DestinationCountries ?? new string[0],
+            r.InitialDate,
+            r.FinalDate
+        );
         string trimmedTitle = req.Title.Trim();
         string trimmedDescription = req.Description.Trim();
         string trimmedRequirements = req.Requirements.Trim();
