@@ -222,6 +222,8 @@ create table private_messages (
         check (length(attached_image) <= 10485760),
     image_media_type text not null
         check (image_media_type in ('image/gif', 'image/jpeg', 'image/png', 'image/webp', 'image/svg+xml')),
+    user_id bigint not null
+        references users(user_id),
     application_id bigint not null
         references applications(application_id),
     deleted boolean not null

@@ -17,9 +17,13 @@ public partial class PrivateMessage
 
     public string ImageMediaType { get; set; } = null!;
 
+    public long UserId { get; set; }
+
     public long ApplicationId { get; set; }
 
     public bool Deleted { get; set; }
 
     public virtual Application Application { get; set; } = null!;
+
+    public virtual User User { get; set; } = null!;
 }

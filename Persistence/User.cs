@@ -21,6 +21,8 @@ public partial class User
 
     public virtual ICollection<ForumMessage> ForumMessages { get; set; } = new List<ForumMessage>();
 
+    public virtual ICollection<PrivateMessage> PrivateMessages { get; set; } = new List<PrivateMessage>();
+
     public virtual Student? Student { get; set; }
 
     public virtual ICollection<Administrative> Administratives { get; set; } = new List<Administrative>();

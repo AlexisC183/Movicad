@@ -52,7 +52,6 @@ public partial class MovicadContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
     {
         var password = Environment.GetEnvironmentVariable("FINAL_PASS");
         optionsBuilder.UseNpgsql($"Host=localhost;Username=final;Password={password};Database=movicad");
@@ -424,11 +423,17 @@ public partial class MovicadContext : DbContext
                 .HasMaxLength(32)
                 .IsFixedLength()
                 .HasColumnName("key");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
 
             entity.HasOne(d => d.Application).WithMany(p => p.PrivateMessages)
                 .HasForeignKey(d => d.ApplicationId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("private_messages_application_id_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.PrivateMessages)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("private_messages_user_id_fkey");
         });
 
         modelBuilder.Entity<Problem>(entity =>
