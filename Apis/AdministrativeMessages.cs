@@ -79,7 +79,7 @@ public static class AdministrativeMessages
 
                 Converters.TryB64ToBytes(metaAndData[1], out byte[]? bytes);
 
-                if (bytes is null)
+                if (bytes is null || bytes.Length > 30 * StorageConstants.Megabyte)
                 {
                     return new DbFile(dataUriFile.Name, null);
                 }
