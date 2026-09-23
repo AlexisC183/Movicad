@@ -54,6 +54,8 @@ app.MapPost("/test", () =>
 
 app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create);
 
+app.MapPost("/api/applications/create", Applications.Create);
+
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
