@@ -59,5 +59,80 @@ public static class ForumMessages
         {
             return;
         }
+
+        try
+        {
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+
+            if (callFor is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La convocatoria no existe"
+                });
+                return;
+            }
+
+            User? msgAuthor = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (msgAuthor is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!(
+                msgAuthor.UserId == callFor.AdministrativeId ||
+                db.Applications
+                    .Where(appl =>
+                        appl.CallForId == callFor.CallForId &&
+                        !appl.Deleted
+                    )
+                    .Any(appl => appl.StudentId == msgAuthor.UserId)
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            ForumMessage message = new()
+            {
+                Key = RandomNumberGenerator.GetHexString(32),
+                Content = trimmedContent,
+                Creation = DateTime.UtcNow,
+                AttachedImage = parsedImageUri.Content,
+                ImageMediaType = parsedImageUri.MediaType,
+                UserId = msgAuthor.UserId,
+                CallForId = callFor.CallForId
+            };
+
+            db.ForumMessages.Add(message);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }
