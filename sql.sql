@@ -1,4 +1,4 @@
-INSERT INTO countries VALUES
+/*INSERT INTO countries VALUES
     (DEFAULT, 'afganistan'),
     (DEFAULT, 'albania'),
     (DEFAULT, 'alemania'),
@@ -224,4 +224,4 @@ INSERT INTO countries VALUES
     (DEFAULT, 'kosovo'),
     (DEFAULT, 'osetia del sur'),
     (DEFAULT, 'somalilandia'),
-    (DEFAULT, 'taiwan');
+    (DEFAULT, 'taiwan');*/

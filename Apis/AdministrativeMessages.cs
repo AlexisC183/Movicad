@@ -89,20 +89,23 @@ public static class AdministrativeMessages
             .ToList();
 
         ICollection<AdministrativeMessageFile> wellFormedFiles = dbFiles
-            .Where(dbFile => dbFile.Uri is not null)
+            .Where(dbFile => dbFile.DataUri is not null)
             .Select(dbFile => new AdministrativeMessageFile()
             {
                 Key = RandomNumberGenerator.GetHexString(32),
                 Name = dbFile.Name,
-                MediaType = dbFile.Uri!.MediaType,
-                Content = dbFile.Uri.Content
+                MediaType = dbFile.DataUri!.MediaType,
+                Content = dbFile.DataUri.Content
             })
             .ToList();
-        IEnumerable<DbFile> malformedFiles = dbFiles.Where(dbFile => dbFile.Uri is null);
+        IEnumerable<DbFile> malformedFiles = dbFiles.Where(dbFile => dbFile.DataUri is null);
 
         try
         {
-            User? recipient = db.Users.SingleOrDefault(user => user.Key == trimmedKey);
+            User? recipient = db.Users.SingleOrDefault(user =>
+                user.Key == trimmedKey &&
+                !user.Deleted
+            );
 
             if (recipient is null)
             {
@@ -115,7 +118,21 @@ public static class AdministrativeMessages
                 return;
             }
 
-            User sender = db.Users.Single(user => user.Key == idRolePair.Id);
+            User? sender = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (sender is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
 
             AdministrativeMessage message = new()
             {
@@ -137,7 +154,7 @@ public static class AdministrativeMessages
                 Status = "ok",
                 Data = new
                 {
-                    MalformedFiles = malformedFiles
+                    RejectedFiles = malformedFiles
                         .Select(dbFile => dbFile.Name)
                         .ToArray()
                 }

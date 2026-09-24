@@ -8,7 +8,7 @@ public static class PrivateMessages
 {
     public record CreateReq(
         string Content,
-        DataUriFile AttachedImage,
+        string? AttachedImageUri,
         string StudentKey,
         string CallForKey
     );
@@ -18,8 +18,6 @@ public static class PrivateMessages
     /// </summary>
     public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
-        // req: <callForKey, studentKey>, content, attached
-
         IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
 
         if (idRolePair is null)
@@ -29,7 +27,7 @@ public static class PrivateMessages
 
         CreateReq req = new(
             r.Content ?? "",
-            new(r.AttachedImage?.Name ?? "", r.AttachedImage?.DataUri ?? ""),
+            r.AttachedImageUri,
             r.StudentKey ?? "",
             r.CallForKey ?? ""
         );
@@ -48,6 +46,115 @@ public static class PrivateMessages
             return;
         }
 
-        // TODO: Regex with valid MIMEs
+        DataUri? parsedImageUri;
+
+        if (req.AttachedImageUri is null)
+        {
+            parsedImageUri = new("image/gif", new byte[0]);
+        }
+        else
+        {
+            parsedImageUri = await Validators.ValidateFile(
+                http,
+                req.AttachedImageUri,
+                10 * StorageConstants.Megabyte,
+                @"image/(gif|jpeg|png|webp|svg\+xml)"
+            );
+        }
+
+        if (parsedImageUri is null)
+        {
+            return;
+        }
+
+        try
+        {
+            User? student = db.Users.SingleOrDefault(user =>
+                user.Key == trimmedStudentKey &&
+                !user.Deleted
+            );
+
+            if (student is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "El estudiante no existe"
+                });
+                return;
+            }
+
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+
+            if (callFor is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La convocatoria no existe"
+                });
+                return;
+            }
+
+            Application? application = db.Applications
+                .SingleOrDefault(appl =>
+                    appl.StudentId == student.UserId &&
+                    appl.CallForId == callFor.CallForId &&
+                    !appl.Deleted
+                );
+
+            if (application is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La postulación no existe"
+                });
+                return;
+            }
+
+            User? msgAuthor = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (msgAuthor is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            PrivateMessage message = new()
+            {
+                Key = RandomNumberGenerator.GetHexString(32),
+                Content = trimmedContent,
+                Creation = DateTime.UtcNow,
+                AttachedImage = parsedImageUri.Content,
+                ImageMediaType = parsedImageUri.MediaType,
+                UserId = msgAuthor.UserId,
+                ApplicationId = application.ApplicationId
+            };
+
+            db.PrivateMessages.Add(message);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }

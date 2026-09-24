@@ -1,9 +1,11 @@
 # TODO
-Movicad.Apis.PrivateMessages at line 51
 
-Document ("/api/sessions/log-out", Sessions.LogOut);
-Document ("/api/calls-for/create", CallForDelegates.Create)
-Document ("/api/administrative-messages/create", AdministrativeMessages.Create)
-Document ("/api/applications/create", Applications.Create)
+Document these:
+("/api/administrative-messages/create", AdministrativeMessages.Create)
+("/api/applications/create", Applications.Create)
+("/api/calls-for/create", CallForDelegates.Create)
+("/api/private-messages/create", PrivateMessages.Create);
+("/api/sessions/log-out", Sessions.LogOut);
+
 
 # TEST

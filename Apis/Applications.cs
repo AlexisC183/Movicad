@@ -23,7 +23,10 @@ public static class Applications
 
         try
         {
-            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor => callFor.Key == trimmedKey);
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedKey &&
+                !callFor.Deleted
+            );
 
             if (callFor is null)
             {
@@ -36,7 +39,21 @@ public static class Applications
                 return;
             }
 
-            User user = db.Users.Single(user => user.Key == idRolePair.Id);
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
 
             Application? pastApplication = db.Applications
                 .SingleOrDefault(appl =>
@@ -58,7 +75,11 @@ public static class Applications
             else if (pastApplication.Banned)
             {
                 http.Response.StatusCode = 403;
-                await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Se le ha vetado de la convocatoria"
+                });
                 return;
             }
             else

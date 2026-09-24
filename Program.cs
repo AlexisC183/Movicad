@@ -58,6 +58,8 @@ app.MapPost("/api/applications/create", Applications.Create);
 
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 
+app.MapPost("/api/private-messages/create", PrivateMessages.Create);
+
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
 app.MapGet("/api/sessions/log-out", Sessions.LogOut);
 app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);

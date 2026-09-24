@@ -21,7 +21,10 @@ public static class Sessions
 
         try
         {
-            User? user = db.Users.SingleOrDefault(u => u.Key == key);
+            User? user = db.Users.SingleOrDefault(u =>
+                u.Key == key &&
+                !u.Deleted
+            );
 
             if (user is null || !BC.Verify(req.Password, user.Password))
             {

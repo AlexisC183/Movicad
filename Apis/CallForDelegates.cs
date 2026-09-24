@@ -106,7 +106,22 @@ public static class CallForDelegates
         try
         {
             DateTime now = DateTime.UtcNow;
-            User user = db.Users.Single(user => user.Key == idRolePair.Id);
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
             ICollection<DestinationCountry> destinationCountries = db.Countries
                 .Join(
                     req.DestinationCountries,
