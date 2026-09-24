@@ -135,6 +135,20 @@ public static class PrivateMessages
                 return;
             }
 
+            if (!(
+                msgAuthor.UserId == student.UserId ||
+                msgAuthor.UserId == callFor.AdministrativeId
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
             PrivateMessage message = new()
             {
                 Key = RandomNumberGenerator.GetHexString(32),
