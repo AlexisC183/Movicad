@@ -16,7 +16,7 @@ public static class ForumFiles
 
     /// <summary>
     /// POST
-    /// <summary/>
+    /// </summary>
     public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
         IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);

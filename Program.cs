@@ -58,6 +58,8 @@ app.MapPost("/api/applications/create", Applications.Create);
 
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 
+app.MapPost("/api/file-requests/create", FileRequests.Create);
+
 app.MapPost("/api/forum-files/create", ForumFiles.Create);
 
 app.MapPost("/api/forum-messages/create", ForumMessages.Create);
