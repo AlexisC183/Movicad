@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
@@ -18,8 +19,6 @@ public static class ForumFiles
     /// <summary/>
     public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
-        // check not exceeding the 100 MB
-
         IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
 
         if (idRolePair is null)
@@ -103,11 +102,44 @@ public static class ForumFiles
                 return;
             }
 
-            long fileSizeSum = await db.ForumFiles
+            int fileSizeSum = await db.ForumFiles
                 .Where(file =>
                     file.CallForId == callFor.CallForId &&
                     !file.Deleted
                 )
+                .Select(file => (int?)file.Content.Length)
+                .SumAsync() ?? 0;
+
+            if (
+                fileSizeSum + parsedFileUri.Content.Length >
+                100 * StorageConstants.Megabyte
+            )
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "El foro tiene un límite de 100 MB en archivos subidos. Intente subir un archivo más pequeño o elimine otros."
+                });
+                return;
+            }
+
+            ForumFile file = new()
+            {
+                Key = RandomNumberGenerator.GetHexString(32),
+                Title = trimmedTitle,
+                Name = req.Name,
+                MediaType = parsedFileUri.MediaType,
+                Content = parsedFileUri.Content,
+                Modification = DateTime.UtcNow,
+                CallForId = callFor.CallForId
+            };
+
+            db.ForumFiles.Add(file);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
         }
         catch (Exception e)
         {
