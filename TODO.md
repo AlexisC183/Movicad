@@ -10,6 +10,7 @@ Document these:
 ("/api/forum-messages/create", ForumMessages.Create);
 ("/api/private-messages/create", PrivateMessages.Create);
 ("/api/sessions/log-out", Sessions.LogOut);
+("/api/student-files/create", StudentFiles.Create)
 
 
 # TEST
