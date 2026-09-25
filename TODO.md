@@ -8,6 +8,7 @@ Document these:
 ("/api/file-requests/create", FileRequests.Create)
 ("/api/forum-files/create", ForumFiles.Create)
 ("/api/forum-messages/create", ForumMessages.Create);
+("/api/frequent-questions/create", FrequentQuestions.Create)
 ("/api/links/create", Links.Create)
 ("/api/private-messages/create", PrivateMessages.Create);
 ("/api/sessions/log-out", Sessions.LogOut);
@@ -15,4 +16,3 @@ Document these:
 
 
 # TEST
-("/api/links/create", Links.Create)
