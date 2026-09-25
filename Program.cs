@@ -64,6 +64,8 @@ app.MapPost("/api/forum-files/create", ForumFiles.Create);
 
 app.MapPost("/api/forum-messages/create", ForumMessages.Create);
 
+app.MapPost("/api/links/create", Links.Create);
+
 app.MapPost("/api/private-messages/create", PrivateMessages.Create);
 
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
