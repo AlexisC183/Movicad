@@ -17,18 +17,27 @@ public static class Problems
     /// </summary>
     public static async Task Create(HttpContext http, MovicadContext db, CreateReq r)
     {
-        // email and subject are optional
-        CreateReq req = new(r.Email, r.Subject, r.Message ?? "");
-        string? trimmedEmail = req.Email?.Trim();
-        string? trimmedSubject = req.Subject?.Trim();
-        string trimmedMessage = req.Message.Trim();
+        string trimmedEmail = r.Email?.Trim() ?? "";
+        string trimmedSubject = r.Subject?.Trim() ?? "";
+        string trimmedMessage = r.Message?.Trim() ?? "";
+
+        if (trimmedEmail.Length > 200)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El correo electrónico es muy largo"
+            });
+            return;
+        }
 
         Regex emailPattern = new(
             @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
             RegexOptions.IgnoreCase
         );
 
-        if (trimmedEmail is not null && !emailPattern.IsMatch(trimmedEmail))
+        if (trimmedEmail.Length > 0 && !emailPattern.IsMatch(trimmedEmail))
         {
             http.Response.StatusCode = 400;
             await http.Response.WriteAsJsonAsync(new
@@ -38,7 +47,46 @@ public static class Problems
             });
             return;
         }
+        if (trimmedSubject.Length > 150)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El asunto es muy largo"
+            });
+            return;
+        }
+        if (trimmedMessage.Length == 0)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El mensaje es muy corto"
+            });
+            return;
+        }
 
-        // TODO
+        try
+        {
+            Problem problem = new()
+            {
+                AuthorEmail = trimmedEmail,
+                Subject = trimmedSubject,
+                Body = trimmedMessage,
+                Creation = DateTime.UtcNow
+            };
+
+            db.Problems.Add(problem);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }
