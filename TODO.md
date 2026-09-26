@@ -11,6 +11,7 @@ Document these:
 ("/api/frequent-questions/create", FrequentQuestions.Create)
 ("/api/links/create", Links.Create)
 ("/api/private-messages/create", PrivateMessages.Create);
+("/api/ratings/create", Ratings.Create)
 ("/api/sessions/log-out", Sessions.LogOut);
 ("/api/student-files/create", StudentFiles.Create)
 

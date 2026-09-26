@@ -104,6 +104,7 @@ public static class AdministrativeMessages
         {
             User? recipient = db.Users.SingleOrDefault(user =>
                 user.Key == trimmedKey &&
+                user.Role == Roles.Administrative &&
                 !user.Deleted
             );
 
@@ -113,7 +114,7 @@ public static class AdministrativeMessages
                 await http.Response.WriteAsJsonAsync(new
                 {
                     Status = "err",
-                    Message = "El destinatario no existe"
+                    Message = "El administrativo destinatario no existe"
                 });
                 return;
             }

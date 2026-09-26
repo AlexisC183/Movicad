@@ -70,6 +70,8 @@ app.MapPost("/api/links/create", Links.Create);
 
 app.MapPost("/api/private-messages/create", PrivateMessages.Create);
 
+app.MapPost("/api/ratings/create", Ratings.Create);
+
 app.MapPost("/api/sessions/log-in", Sessions.LogIn);
 app.MapGet("/api/sessions/log-out", Sessions.LogOut);
 app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);
