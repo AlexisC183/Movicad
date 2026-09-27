@@ -11,6 +11,7 @@
     <ul>
         <li>get(url)</li>
         <li>post(url, jso)</li>
+        <li>patch(url, jso)</li>
     </ul>
 </body>
 <script>
@@ -23,6 +24,16 @@
     function post(url, jso) {
         fetch(url, {
             method: 'POST',
+            body: JSON.stringify(jso),
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(r => r.json())
+            .then(console.log);
+    }
+
+    function patch(url, jso) {
+        fetch(url, {
+            method: 'PATCH',
             body: JSON.stringify(jso),
             headers: { 'Content-Type': 'application/json' }
         })

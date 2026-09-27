@@ -182,4 +182,117 @@ public static class Users
             await http.Response.DbErr(e);
         }
     }
+
+    public record UpdatePasswordReq(
+        string OldPassword,
+        string NewPassword,
+        string NewPassword1
+    );
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task UpdatePassword(HttpContext http, MovicadContext db, UpdatePasswordReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        UpdatePasswordReq req = new(r.OldPassword ?? "", r.NewPassword ?? "", r.NewPassword1 ?? "");
+
+        if (req.NewPassword != req.NewPassword1)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Las contraseñas no coinciden"
+            });
+            return;
+        }
+        if (req.NewPassword.Length < 8)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Introducir una contraseña más larga"
+            });
+            return;
+        }
+        if (req.NewPassword.Length > 50)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Su contraseña es muy larga"
+            });
+            return;
+        }
+        if (req.NewPassword.All(char.IsLetterOrDigit))
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Introducir una contraseña con un carácter especial"
+            });
+            return;
+        }
+        if (req.NewPassword.All(ch => ch == req.NewPassword[0]))
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Introducir una contraseña con caracteres diferentes"
+            });
+            return;
+        }
+
+        try
+        {
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+            if (!BC.Verify(req.OldPassword, user.Password))
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Contraseña actual incorrecta"
+                });
+                return;
+            }
+
+            user.Password = BC.HashPassword(req.NewPassword);
+
+            db.Users.Update(user);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
 }
