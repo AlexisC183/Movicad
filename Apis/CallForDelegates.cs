@@ -124,7 +124,7 @@ public static class CallForDelegates
 
             ICollection<DestinationCountry> destinationCountries = db.Countries
                 .Join(
-                    req.DestinationCountries,
+                    req.DestinationCountries.ToHashSet(),
                     country => country.Name,
                     name => name,
                     (country, _) => country
@@ -154,6 +154,159 @@ public static class CallForDelegates
 
             http.Response.StatusCode = 200;
             await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    public record UpdateReq(
+        string Key,
+        string Title,
+        string Description,
+        string Requirements,
+        string[] DestinationCountries,
+        string? InitialDate,
+        string? FinalDate
+    );
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task Update(HttpContext http, MovicadContext db, UpdateReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        UpdateReq req = new(
+            r.Key ?? "",
+            r.Title ?? "",
+            r.Description ?? "",
+            r.Requirements ?? "",
+            r.DestinationCountries ?? new string[0],
+            r.InitialDate,
+            r.FinalDate
+        );
+        string trimmedKey = req.Key.Trim();
+        string trimmedTitle = req.Title.Trim();
+        string trimmedDescription = req.Description.Trim();
+        string trimmedRequirements = req.Requirements.Trim();
+
+        if (trimmedTitle.Length < 1 || trimmedTitle.Length > 200)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El título debe contener entre 1 y 200 caracteres"
+            });
+            return;
+        }
+
+        bool correctInitialDate = DateTime.TryParse(req.InitialDate, out DateTime initialDate);
+
+        if (req.InitialDate is not null && !correctInitialDate)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Fecha de apertura no válida"
+            });
+            return;
+        }
+
+        DateTime? initialDateUtc = req.InitialDate is null
+        ?
+            null
+        :
+            new(initialDate.Ticks, DateTimeKind.Utc);
+
+        bool correctFinalDate = DateTime.TryParse(req.FinalDate, out DateTime finalDate);
+
+        if (req.FinalDate is not null && !correctFinalDate)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Fecha de cierre no válida"
+            });
+            return;
+        }
+
+        DateTime? finalDateUtc = req.FinalDate is null
+        ?
+            null
+        :
+            new(finalDate.Ticks, DateTimeKind.Utc);
+
+        if (
+            initialDateUtc is not null &&
+            finalDateUtc is not null &&
+            initialDateUtc > finalDateUtc
+        )
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "La fecha de apertura no puede ser mayor que la fecha de cierre"
+            });
+            return;
+        }
+
+        try
+        {
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedKey &&
+                !callFor.Deleted
+            );
+
+            if (callFor is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La convocatoria no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (user.UserId != callFor.AdministrativeId)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            // TODO
         }
         catch (Exception e)
         {
