@@ -84,6 +84,7 @@ app.MapPost("/api/student-files/create", StudentFiles.Create);
 
 app.MapPost("/api/users/create", Users.Create);
 app.MapPatch("/api/users/update-password", Users.UpdatePassword);
+app.MapPatch("/api/users/update-profile", Users.UpdateProfile);
 
 app.MapFallbackToFile("index.html");
 

@@ -373,7 +373,7 @@ public static class Users
                 await http.Response.WriteAsJsonAsync(new
                 {
                     Status = "err",
-                    Messag = "Su nombre es muy largo"
+                    Message = "Su nombre es muy largo"
                 });
                 return;
             }
@@ -429,9 +429,96 @@ public static class Users
                 await http.Response.WriteAsJsonAsync(new
                 {
                     Status = "err",
-                    Messag = "Su nombre es muy largo"
+                    Message = "Su nombre es muy largo"
                 });
                 return;
+            }
+            if (trimmedAcronym.Length > 100)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su acrónimo es muy largo"
+                });
+                return;
+            }
+            if (req.Type is not ("publica" or "privada" or "comunitaria"))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Tipo no válido"
+                });
+                return;
+            }
+
+            Regex urlPattern = new("^https?://", RegexOptions.IgnoreCase);
+
+            if (trimmedWebsite.Length > 0 && !urlPattern.IsMatch(trimmedWebsite))
+            {
+                trimmedWebsite = "http://" + trimmedWebsite;
+            }
+
+            try
+            {
+                Country? country = null;
+
+                if (req.Country.Length > 0)
+                {
+                    country = db.Countries.SingleOrDefault(c => c.Name == req.Country);
+                }
+                if (req.Country.Length > 0 && country is null)
+                {
+                    http.Response.StatusCode = 400;
+                    await http.Response.WriteAsJsonAsync(new
+                    {
+                        Status = "err",
+                        Message = "País no válido"
+                    });
+                    return;
+                }
+
+                Administrative? administrative = db.Users
+                    .Join(
+                        db.Administratives,
+                        user => user.UserId,
+                        admin => admin.UserId,
+                        (user, admin) => new { user, admin }
+                    )
+                    .Where(userAdmin =>
+                        userAdmin.user.Key == idRolePair.Id &&
+                        !userAdmin.user.Deleted
+                    )
+                    .Select(userAdmin => userAdmin.admin)
+                    .SingleOrDefault();
+
+                if (administrative is null)
+                {
+                    http.Response.StatusCode = 401;
+                    await http.Response.WriteAsJsonAsync(new
+                    {
+                        Status = "err",
+                        Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                    });
+                    return;
+                }
+
+                administrative.Name = trimmedName;
+                administrative.Acronym = trimmedAcronym;
+                administrative.Type = req.Type;
+                administrative.CountryId = country?.CountryId;
+                administrative.Website = trimmedWebsite;
+                administrative.Icon = parsedImageUri.Content;
+                administrative.IconMediaType = parsedImageUri.MediaType;
+                
+                db.Administratives.Update(administrative);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                await http.Response.DbErr(e);
             }
         }
         else
