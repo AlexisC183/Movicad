@@ -295,4 +295,151 @@ public static class Users
             await http.Response.DbErr(e);
         }
     }
+
+    public interface IUpdateProfileReq
+    {
+        abstract string Name { get; }
+        abstract string IconUri { get; }
+    }
+
+    public interface IUpdateAdministrativeProfileReq : IUpdateProfileReq
+    {
+        abstract string Acronym { get; }
+        abstract string Type { get; }
+        abstract string Country { get; }
+        abstract string Website { get; }
+    }
+
+    public record UpdateProfileReq(
+        string Name,
+        string IconUri,
+        string Acronym,
+        string Type,
+        string Country,
+        string Website
+    ) : IUpdateAdministrativeProfileReq;
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task UpdateProfile(HttpContext http, MovicadContext db, UpdateProfileReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        UpdateProfileReq request = new(
+            r.Name ?? "",
+            r.IconUri ?? "",
+            r.Acronym ?? "",
+            r.Type ?? "",
+            r.Country ?? "",
+            r.Website ?? ""
+        );
+
+        DataUri? parsedImageUri;
+
+        if (request.IconUri.Length == 0)
+        {
+            parsedImageUri = new("image/gif", new byte[0]);
+        }
+        else
+        {
+            parsedImageUri = await Validators.ValidateFile(
+                http,
+                request.IconUri,
+                10 * StorageConstants.Megabyte,
+                @"image/(gif|jpeg|png|webp|svg\+xml)"
+            );
+        }
+
+        if (parsedImageUri is null)
+        {
+            return;
+        }
+
+        string trimmedName = request.Name.Trim();
+
+        if (idRolePair.Role == Roles.Student)
+        {
+            IUpdateProfileReq req = request;
+
+            if (trimmedName.Length > 100)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Messag = "Su nombre es muy largo"
+                });
+                return;
+            }
+
+            try
+            {
+                Student? student = db.Users
+                    .Join(
+                        db.Students,
+                        user => user.UserId,
+                        student => student.UserId,
+                        (user, student) => new { user, student }
+                    )
+                    .Where(userStudent =>
+                        userStudent.user.Key == idRolePair.Id &&
+                        !userStudent.user.Deleted
+                    )
+                    .Select(userStudent => userStudent.student)
+                    .SingleOrDefault();
+
+                if (student is null)
+                {
+                    http.Response.StatusCode = 401;
+                    await http.Response.WriteAsJsonAsync(new
+                    {
+                        Status = "err",
+                        Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                    });
+                    return;
+                }
+
+                student.Name = trimmedName;
+                student.Icon = parsedImageUri.Content;
+                student.IconMediaType = parsedImageUri.MediaType;
+
+                db.Students.Update(student);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                await http.Response.DbErr(e);
+            }
+        }
+        else if (idRolePair.Role == Roles.Administrative)
+        {
+            IUpdateAdministrativeProfileReq req = request;
+            string trimmedAcronym = req.Acronym.Trim();
+            string trimmedWebsite = req.Website.Trim();
+
+            if (trimmedName.Length > 200)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Messag = "Su nombre es muy largo"
+                });
+                return;
+            }
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
+
+        http.Response.StatusCode = 200;
+        await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+    }
 }
