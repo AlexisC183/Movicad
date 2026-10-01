@@ -147,6 +147,8 @@ public static class ForumFiles
         }
     }
 
+    public record UpdateReq(string Key, string Title);
+
     /// <summary>
     /// PATCH
     /// </summary>
@@ -157,6 +159,83 @@ public static class ForumFiles
         if (idRolePair is null)
         {
             return;
+        }
+
+        string trimmedKey = r.Key?.Trim() ?? "";
+        string trimmedTitle = r.Title?.Trim() ?? "";
+
+        if (trimmedTitle.Length < 1 || trimmedTitle.Length > 150)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El título debe contener entre 1 y 150 caracteres"
+            });
+            return;
+        }
+
+        try
+        {
+            ForumFile? file = db.ForumFiles.SingleOrDefault(file =>
+                file.Key == trimmedKey &&
+                !file.Deleted
+            );
+
+            if (file is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "El archivo no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!db.CallsFors.Any(callFor =>
+                callFor.CallForId == file.CallForId &&
+                callFor.AdministrativeId == user.UserId &&
+                !callFor.Deleted
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+            
+            file.Title = trimmedTitle;
+            file.Modification = DateTime.UtcNow;
+
+            db.ForumFiles.Update(file);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
         }
     }
 }
