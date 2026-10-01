@@ -327,44 +327,23 @@ public static class CallForDelegates
                 .Except(incomingCountryIds)
                 .ToList();
 
-            //IEnumerable<DestinationCountry> updateDestinationCountries = oldDestinationCountries
-            List<DestinationCountry> updateDestinationCountries = oldDestinationCountries
-                .Select(destination => new DestinationCountry()
-                {
-                    CallForId = destination.CallForId,
-                    CountryId = destination.CountryId,
-                    Deleted = destination switch
-                    {
-                        { Deleted: false } when removalCountryIds.Contains(destination.CountryId) => true,
-                        { Deleted: true } when incomingCountryIds.Contains(destination.CountryId) => false,
-                        _ => destination.Deleted
-                    }
-                })
-                .ToList(); //
-            
-            Console.WriteLine("===== Destination countries to update =====");
-            foreach (DestinationCountry dc in updateDestinationCountries)
+            foreach (DestinationCountry destination in oldDestinationCountries)
             {
-                Console.WriteLine(dc.CountryId);
+                destination.Deleted = destination switch
+                {
+                    { Deleted: false } when removalCountryIds.Contains(destination.CountryId) => true,
+                    { Deleted: true } when incomingCountryIds.Contains(destination.CountryId) => false,
+                    _ => destination.Deleted
+                };
             }
-            Console.WriteLine("=====");
 
-            //IEnumerable<DestinationCountry> insertionDestinationCountries = incomingCountryIds
-            List<DestinationCountry> insertionDestinationCountries = incomingCountryIds
+            IEnumerable<DestinationCountry> insertionDestinationCountries = incomingCountryIds
                 .Except(oldCountryIds)
                 .Select(id => new DestinationCountry()
                 {
                     CallForId = callFor.CallForId,
                     CountryId = id
-                })
-                .ToList(); //
-
-            Console.WriteLine("===== Destination countries to insert =====");
-            foreach (DestinationCountry dc in insertionDestinationCountries)
-            {
-                Console.WriteLine(dc.CountryId);
-            }
-            Console.WriteLine("=====");
+                });
 
             callFor.Title = trimmedTitle;
             callFor.InitialDate = initialDateUtc;
@@ -374,7 +353,7 @@ public static class CallForDelegates
             callFor.Modification = DateTime.UtcNow;
 
             db.CallsFors.Update(callFor);
-            db.DestinationCountries.UpdateRange(updateDestinationCountries);
+            db.DestinationCountries.UpdateRange(oldDestinationCountries);
             db.DestinationCountries.AddRange(insertionDestinationCountries);
             await db.SaveChangesAsync();
 

@@ -3,5 +3,3 @@
 
 
 # TEST
-
-CallForDelegates.Update
