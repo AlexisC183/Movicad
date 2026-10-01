@@ -114,4 +114,29 @@ public static class FrequentQuestions
             await http.Response.DbErr(e);
         }
     }
+
+    public record UpdateReq(
+        string Key,
+        string Question,
+        string Answer
+    );
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task Update(HttpContext http, MovicadContext db, UpdateReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedKey = r.Key?.Trim() ?? "";
+        string trimmedQuestion = r.Question?.Trim() ?? "";
+        string trimmedAnswer = r.Answer?.Trim() ?? "";
+        
+        
+    }
 }
