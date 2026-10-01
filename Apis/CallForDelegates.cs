@@ -306,7 +306,80 @@ public static class CallForDelegates
                 return;
             }
 
-            // TODO
+            List<DestinationCountry> oldDestinationCountries = db.DestinationCountries
+                .Where(destination => destination.CallForId == callFor.CallForId)
+                .ToList();
+
+            List<long> oldCountryIds = oldDestinationCountries
+                .Select(destination => destination.CountryId)
+                .ToList();
+
+            List<long> incomingCountryIds = db.Countries
+                .Join(
+                    req.DestinationCountries.ToHashSet(),
+                    country => country.Name,
+                    name => name,
+                    (country, _) => country.CountryId
+                )
+                .ToList();
+
+            List<long> removalCountryIds = oldCountryIds
+                .Except(incomingCountryIds)
+                .ToList();
+
+            //IEnumerable<DestinationCountry> updateDestinationCountries = oldDestinationCountries
+            List<DestinationCountry> updateDestinationCountries = oldDestinationCountries
+                .Select(destination => new DestinationCountry()
+                {
+                    CallForId = destination.CallForId,
+                    CountryId = destination.CountryId,
+                    Deleted = destination switch
+                    {
+                        { Deleted: false } when removalCountryIds.Contains(destination.CountryId) => true,
+                        { Deleted: true } when incomingCountryIds.Contains(destination.CountryId) => false,
+                        _ => destination.Deleted
+                    }
+                })
+                .ToList(); //
+            
+            Console.WriteLine("===== Destination countries to update =====");
+            foreach (DestinationCountry dc in updateDestinationCountries)
+            {
+                Console.WriteLine(dc.CountryId);
+            }
+            Console.WriteLine("=====");
+
+            //IEnumerable<DestinationCountry> insertionDestinationCountries = incomingCountryIds
+            List<DestinationCountry> insertionDestinationCountries = incomingCountryIds
+                .Except(oldCountryIds)
+                .Select(id => new DestinationCountry()
+                {
+                    CallForId = callFor.CallForId,
+                    CountryId = id
+                })
+                .ToList(); //
+
+            Console.WriteLine("===== Destination countries to insert =====");
+            foreach (DestinationCountry dc in insertionDestinationCountries)
+            {
+                Console.WriteLine(dc.CountryId);
+            }
+            Console.WriteLine("=====");
+
+            callFor.Title = trimmedTitle;
+            callFor.InitialDate = initialDateUtc;
+            callFor.FinalDate = finalDateUtc;
+            callFor.Description = req.Description;
+            callFor.Requirements = req.Requirements;
+            callFor.Modification = DateTime.UtcNow;
+
+            db.CallsFors.Update(callFor);
+            db.DestinationCountries.UpdateRange(updateDestinationCountries);
+            db.DestinationCountries.AddRange(insertionDestinationCountries);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
         }
         catch (Exception e)
         {
