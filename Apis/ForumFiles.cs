@@ -146,4 +146,17 @@ public static class ForumFiles
             await http.Response.DbErr(e);
         }
     }
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task Update(HttpContext http, MovicadContext db, UpdateReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+    }
 }
