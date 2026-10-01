@@ -102,28 +102,6 @@ public static class ForumFiles
                 return;
             }
 
-            int fileSizeSum = await db.ForumFiles
-                .Where(file =>
-                    file.CallForId == callFor.CallForId &&
-                    !file.Deleted
-                )
-                .Select(file => (int?)file.Content.Length)
-                .SumAsync() ?? 0;
-
-            if (
-                fileSizeSum + parsedFileUri.Content.Length >
-                100 * StorageConstants.Megabyte
-            )
-            {
-                http.Response.StatusCode = 400;
-                await http.Response.WriteAsJsonAsync(new
-                {
-                    Status = "err",
-                    Message = "El foro tiene un límite de 100 MB en archivos subidos. Intente subir un archivo más pequeño o elimine otros."
-                });
-                return;
-            }
-
             ForumFile file = new()
             {
                 Key = RandomNumberGenerator.GetHexString(32),
@@ -147,7 +125,12 @@ public static class ForumFiles
         }
     }
 
-    public record UpdateReq(string Key, string Title);
+    public record UpdateReq(
+        string Key,
+        string Title,
+        string Name,
+        string FileUri
+    );
 
     /// <summary>
     /// PATCH
@@ -161,8 +144,14 @@ public static class ForumFiles
             return;
         }
 
-        string trimmedKey = r.Key?.Trim() ?? "";
-        string trimmedTitle = r.Title?.Trim() ?? "";
+        UpdateReq req = new(
+            r.Key ?? "",
+            r.Title ?? "",
+            r.Name ?? "",
+            r.FileUri ?? ""
+        );
+        string trimmedKey = req.Key.Trim();
+        string trimmedTitle = req.Title.Trim();
 
         if (trimmedTitle.Length < 1 || trimmedTitle.Length > 150)
         {
@@ -172,6 +161,17 @@ public static class ForumFiles
                 Status = "err",
                 Message = "El título debe contener entre 1 y 150 caracteres"
             });
+            return;
+        }
+
+        DataUri? parsedFileUri = await Validators.ValidateFile(
+            http,
+            req.FileUri,
+            30 * StorageConstants.Megabyte
+        );
+
+        if (parsedFileUri is null)
+        {
             return;
         }
 
@@ -188,7 +188,7 @@ public static class ForumFiles
                 await http.Response.WriteAsJsonAsync(new
                 {
                     Status = "err",
-                    Message = "El archivo no existe"
+                    Message = "El archivo a modificar no existe"
                 });
                 return;
             }
@@ -225,6 +225,9 @@ public static class ForumFiles
             }
             
             file.Title = trimmedTitle;
+            file.Name = req.Name;
+            file.MediaType = parsedFileUri.MediaType;
+            file.Content = parsedFileUri.Content;
             file.Modification = DateTime.UtcNow;
 
             db.ForumFiles.Update(file);
