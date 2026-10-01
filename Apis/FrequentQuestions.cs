@@ -137,6 +137,89 @@ public static class FrequentQuestions
         string trimmedQuestion = r.Question?.Trim() ?? "";
         string trimmedAnswer = r.Answer?.Trim() ?? "";
         
-        
+        if (trimmedQuestion.Length < 1 || trimmedQuestion.Length > 150)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "La pregunta debe contener entre 1 y 150 caracteres"
+            });
+            return;
+        }
+        if (trimmedAnswer.Length == 0)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "La respuesta es muy corta"
+            });
+            return;
+        }
+
+        try
+        {
+            FrequentQuestion? frequentQuestion = db.FrequentQuestions
+                .SingleOrDefault(fq =>
+                    fq.Key == trimmedKey &&
+                    !fq.Deleted
+                );
+            
+            if (frequentQuestion is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La pregunta frecuente a modificar no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!db.CallsFors.Any(callFor =>
+                callFor.CallForId == frequentQuestion.CallForId &&
+                callFor.AdministrativeId == user.UserId &&
+                !callFor.Deleted
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            frequentQuestion.Question = trimmedQuestion;
+            frequentQuestion.Answer = trimmedAnswer;
+
+            db.FrequentQuestions.Update(frequentQuestion);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }
