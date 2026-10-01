@@ -71,6 +71,7 @@ app.MapPost("/api/forum-messages/create", ForumMessages.Create);
 app.MapPost("/api/frequent-questions/create", FrequentQuestions.Create);
 
 app.MapPost("/api/links/create", Links.Create);
+app.MapPatch("/api/links/update", Links.Update);
 
 app.MapPost("/api/private-messages/create", PrivateMessages.Create);
 

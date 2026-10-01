@@ -122,4 +122,118 @@ public static class Links
             await http.Response.DbErr(e);
         }
     }
+
+    public record UpdateReq(
+        string Key,
+        string Title,
+        string Url
+    );
+
+    /// <summary>
+    /// PATCH
+    /// </summary>
+    public static async Task Update(HttpContext http, MovicadContext db, UpdateReq r)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedKey = r.Key?.Trim() ?? "";
+        string trimmedTitle = r.Title?.Trim() ?? "";
+        string trimmedUrl = r.Url?.Trim() ?? "";
+
+        if (trimmedTitle.Length < 1 || trimmedTitle.Length > 150)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "El título debe contener entre 1 y 150 caracteres"
+            });
+            return;
+        }
+        if (trimmedUrl.Length == 0)
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "La URL es muy corta"
+            });
+            return;
+        }
+
+        try
+        {
+            Link? link = db.Links.SingleOrDefault(link =>
+                link.Key == trimmedKey &&
+                !link.Deleted
+            );
+
+            if (link is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "El enlace a modificar no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!db.CallsFors.Any(callFor =>
+                callFor.CallForId == link.CallForId &&
+                callFor.AdministrativeId == user.UserId &&
+                !callFor.Deleted
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            Regex urlPattern = new("^https?://", RegexOptions.IgnoreCase);
+
+            if (!urlPattern.IsMatch(trimmedUrl))
+            {
+                trimmedUrl = "http://" + trimmedUrl;
+            }
+
+            link.Title = trimmedTitle;
+            link.Url = trimmedUrl;
+
+            db.Links.Update(link);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
 }

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
