@@ -1,10 +1,6 @@
 # TODO
-FrequentQuestions.Update
-
 
 # TEST
-
-
 
 # Código descartado
 ## Comprobando cuota de archivos subidos a un foro antes de crear la instancia de ForumFile
