@@ -1,4 +1,6 @@
 # TODO
+All DELETE APIs
+All GET APIs
 
 # TEST
 
