@@ -1,4 +1,5 @@
 # TODO
+ForumFiles.Delete
 All DELETE APIs
 All GET APIs
 
