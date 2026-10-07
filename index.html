@@ -12,6 +12,7 @@
         <li>get(url)</li>
         <li>post(url, jso)</li>
         <li>patch(url, jso)</li>
+        <li>del(url, jso)</li>
     </ul>
 </body>
 <script>
@@ -21,9 +22,9 @@
             .then(console.log);
     }
 
-    function post(url, jso) {
+    function fetchWithMethod(url, jso, method) {
         fetch(url, {
-            method: 'POST',
+            method: method,
             body: JSON.stringify(jso),
             headers: { 'Content-Type': 'application/json' }
         })
@@ -31,14 +32,16 @@
             .then(console.log);
     }
 
+    function post(url, jso) {
+        fetchWithMethod(url, jso, 'POST');
+    }
+
     function patch(url, jso) {
-        fetch(url, {
-            method: 'PATCH',
-            body: JSON.stringify(jso),
-            headers: { 'Content-Type': 'application/json' }
-        })
-            .then(r => r.json())
-            .then(console.log);
+        fetchWithMethod(url, jso, 'PATCH');
+    }
+
+    function del(url, jso) {
+        fetchWithMethod(url, jso, 'DELETE');
     }
 </script>
 </html>

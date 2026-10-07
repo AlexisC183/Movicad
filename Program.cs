@@ -56,6 +56,7 @@ app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create
 
 app.MapPost("/api/applications/create", Applications.Create);
 app.MapPatch("/api/applications/undo-expulsion", Applications.UndoExpulsion);
+app.MapDelete("/api/applications/delete", Applications.Delete);
 
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 app.MapPatch("/api/calls-for/update", CallForDelegates.Update);
