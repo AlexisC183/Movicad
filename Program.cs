@@ -60,6 +60,7 @@ app.MapDelete("/api/applications/delete", Applications.Delete);
 
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 app.MapPatch("/api/calls-for/update", CallForDelegates.Update);
+app.MapDelete("/api/calls-for/delete", CallForDelegates.Delete);
 
 app.MapPost("/api/expulsion-reasons/create", ExpulsionReasons.Create);
 

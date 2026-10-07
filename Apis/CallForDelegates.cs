@@ -1,6 +1,8 @@
+using BC = BCrypt.Net.BCrypt;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Movicad.Apis;
 
@@ -355,6 +357,97 @@ public static class CallForDelegates
             db.CallsFors.Update(callFor);
             db.DestinationCountries.UpdateRange(oldDestinationCountries);
             db.DestinationCountries.AddRange(insertionDestinationCountries);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    public record DeleteReq(string CallForKey, string Password);
+
+    /// <summary>
+    /// DELETE
+    /// </summary>
+    public static async Task Delete(
+        HttpContext http,
+        MovicadContext db,
+        [FromBody] DeleteReq r
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedCallForKey = r.CallForKey?.Trim() ?? "";
+        string password = r.Password ?? "";
+
+        try
+        {
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+
+            if (callFor is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La convocatoria no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (user.UserId != callFor.AdministrativeId)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            if (!BC.Verify(password, user.Password))
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Contraseña incorrecta"
+                });
+                return;
+            }
+
+            callFor.Deleted = true;
+
+            db.CallsFors.Update(callFor);
             await db.SaveChangesAsync();
 
             http.Response.StatusCode = 200;
