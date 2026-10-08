@@ -296,7 +296,28 @@ public static class ForumFiles
                 return;
             }
 
-            
+            if (!db.CallsFors.Any(callFor =>
+                callFor.CallForId == file.CallForId &&
+                callFor.AdministrativeId == user.UserId &&
+                !callFor.Deleted
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            file.Deleted = true;
+
+            db.ForumFiles.Update(file);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
         }
         catch (Exception e)
         {

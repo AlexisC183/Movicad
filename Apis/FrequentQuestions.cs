@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
@@ -212,6 +213,90 @@ public static class FrequentQuestions
             frequentQuestion.Answer = trimmedAnswer;
 
             db.FrequentQuestions.Update(frequentQuestion);
+            await db.SaveChangesAsync();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new { Status = "ok" });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    public record DeleteReq(string Key);
+
+    /// <summary>
+    /// DELETE
+    /// </summary>
+    public static async Task Delete(
+        HttpContext http,
+        MovicadContext db,
+        [FromBody] DeleteReq r
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedKey = r.Key?.Trim() ?? "";
+
+        try
+        {
+            FrequentQuestion? question = db.FrequentQuestions
+                .SingleOrDefault(question =>
+                    question.Key == trimmedKey &&
+                    !question.Deleted
+                );
+
+            if (question is null)
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "La pregunta frecuente no existe"
+                });
+                return;
+            }
+
+            User? user = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (user is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!db.CallsFors.Any(callFor =>
+                callFor.CallForId == question.CallForId &&
+                callFor.AdministrativeId == user.UserId &&
+                !callFor.Deleted
+            ))
+            {
+                http.Response.StatusCode = 400;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "No es miembro"
+                });
+                return;
+            }
+
+            question.Deleted = true;
+
+            db.FrequentQuestions.Update(question);
             await db.SaveChangesAsync();
 
             http.Response.StatusCode = 200;

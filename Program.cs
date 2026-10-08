@@ -68,14 +68,17 @@ app.MapPost("/api/file-requests/create", FileRequests.Create);
 
 app.MapPost("/api/forum-files/create", ForumFiles.Create);
 app.MapPatch("/api/forum-files/update", ForumFiles.Update);
+app.MapDelete("/api/forum-files/delete", ForumFiles.Delete);
 
 app.MapPost("/api/forum-messages/create", ForumMessages.Create);
 
 app.MapPost("/api/frequent-questions/create", FrequentQuestions.Create);
 app.MapPatch("/api/frequent-questions/update", FrequentQuestions.Update);
+app.MapDelete("/api/frequent-questions/delete", FrequentQuestions.Delete);
 
 app.MapPost("/api/links/create", Links.Create);
 app.MapPatch("/api/links/update", Links.Update);
+app.MapDelete("/api/links/delete", Links.Delete);
 
 app.MapPost("/api/private-messages/create", PrivateMessages.Create);
 
