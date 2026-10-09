@@ -1,6 +1,6 @@
 # TODO
 
-All DELETE APIs
+Administratives.ReadAll
 All GET APIs
 
 # TEST
