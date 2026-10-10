@@ -35,23 +35,23 @@ public static class Administratives
             return;
         }
 
-        IEnumerable<Administrative> administratives;
+        // IEnumerable<Administrative> administratives;
 
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            administratives = 
-        }
-        else if ()
-        {
+        // if (!string.IsNullOrWhiteSpace(searchTerm))
+        // {
+        //     administratives = 
+        // }
+        // else if ()
+        // {
             
-        }
-        else if ()
-        {
+        // }
+        // else if ()
+        // {
             
-        }
-        else
-        {
+        // }
+        // else
+        // {
             
-        }
+        // }
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.EntityFrameworkCore;
 using Movicad.Apis;
 using Movicad.Persistence;
 using Movicad.Utils;
@@ -45,11 +46,10 @@ app.MapGet("/api", () =>
     return Results.File(filePath, "text/html");
 }); //
 
-app.MapPost("/test", () =>
+app.MapGet("/test", (MovicadContext db) =>
 {
 
-
-    return "{}";
+    return 0;
 }); //
 
 app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create);
