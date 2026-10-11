@@ -18,22 +18,12 @@ public static class Administratives
     public static async Task ReadAll(
         HttpContext http,
         MovicadContext db,
-        [FromQuery(Name = "from-id")] long? fromId,
+        [FromQuery(Name = "from-id")] long? fromIdMaybe,
         [FromQuery(Name = "search-term")] string searchTerm = "",
         string type = "",
         string country = ""
     )
     {
-        /*
-        pageSize = 4 (in real code is 50)
-
-        fromId = 59 (max is default)
-        next (front-end): fromId - pageSize
-
-        .Where(r => r.Id <= fromId)
-        .OrderByDescending(r => r.Id)
-        .Take(pageSize)
-        */
         IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
 
         if (idRolePair is null)
@@ -42,6 +32,7 @@ public static class Administratives
         }
 
         IEnumerable<UserAdminCountry> userAdminCountries = db.Users
+            .Where(user => !user.Deleted)
             .Join(
                 db.Administratives,
                 user => user.UserId,
@@ -61,57 +52,71 @@ public static class Administratives
 
         IEnumerable<UserAdminCountry> filteredUserAdminCountries;
 
-        if ()
+        if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            
+            string trimmedSearchTerm = searchTerm.Trim();
+            filteredUserAdminCountries = userAdminCountries
+                .Where(uac =>
+                    uac.Admin.Name.Contains(trimmedSearchTerm) ||
+                    uac.Admin.Acronym.Contains(trimmedSearchTerm) ||
+                    uac.User.Key.Contains(trimmedSearchTerm)
+                );
         }
-        else if ()
+        else if (!string.IsNullOrWhiteSpace(type))
         {
-            
+            filteredUserAdminCountries = userAdminCountries.Where(uac => uac.Admin.Type == type);
         }
-        else if ()
+        else if (!string.IsNullOrWhiteSpace(country))
         {
-            
+            filteredUserAdminCountries = userAdminCountries
+                .Where(uac => uac.Country is Country c && c.Name == country);
         }
         else
         {
-            
+            filteredUserAdminCountries = userAdminCountries;
         }
 
-        // if (!string.IsNullOrWhiteSpace(searchTerm))
-        // {
-        //     string trimmedSearchTerm = searchTerm.Trim();
-        //     filteredUserAdminPairs = userAdminPairs
-        //         .Where(pair =>
-        //             !pair.User.Deleted && (
-        //                 pair.Admin.Name.Contains(trimmedSearchTerm) ||
-        //                 pair.Admin.Acronym.Contains(trimmedSearchTerm) ||
-        //                 pair.User.Key.Contains(trimmedSearchTerm)
-        //             )
-        //         );
-        // }
-        // else if (!string.IsNullOrWhiteSpace(type))
-        // {
-        //     filteredUserAdminPairs = userAdminPairs
-        //         .Where(pair => pair.Admin.Type == type);
-        // }
-        // else if (!string.IsNullOrWhiteSpace(country))
-        // {
-        //     filteredUserAdminPairs = userAdminPairs
-        //         .Join(
-        //             db.Countries,
-        //             pair => pair.Admin.CountryId,
-        //             country => country.CountryId,
-        //             (pair, country) => new { pair, country }
-        //         )
-        //         .Where(userAdminCountry =>
-        //             userAdminCountry.country.Name == country
-        //         )
-        //         .Select()
-        // }
-        // else
-        // {
-            
-        // }
+        try
+        {
+            long fromId = fromIdMaybe ?? filteredUserAdminCountries
+                .Select(uac => uac.User.UserId)
+                .OrderDescending()
+                .FirstOrDefault();
+
+            var administratives = filteredUserAdminCountries
+                .Where(uac => uac.User.UserId <= fromId)
+                .OrderByDescending(uac => uac.User.UserId)
+                .Take(6) // 50
+                .Select(uac => new
+                {
+                    uac.User.Key,
+                    uac.Admin.Name,
+                    uac.Admin.Type,
+                    Country = uac.Country?.Name,
+                    uac.Admin.Icon,
+                    uac.Admin.IconMediaType
+                })
+                .ToArray();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    FromId = fromId,
+                    Administratives = administratives
+                },
+                IdRolePair = idRolePair
+            });
+
+            /* FRONT-END
+            nextFromId = fromId - 50
+            */
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 }

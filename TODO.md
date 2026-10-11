@@ -1,9 +1,9 @@
 # TODO
 
-Administratives.ReadAll
 All GET APIs
 
 # TEST
+Administratives.ReadAll
 
 # Código descartado
 ## Comprobando cuota de archivos subidos a un foro antes de crear la instancia de ForumFile
