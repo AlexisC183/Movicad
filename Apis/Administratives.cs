@@ -18,7 +18,7 @@ public static class Administratives
     public static async Task ReadAll(
         HttpContext http,
         MovicadContext db,
-        [FromQuery(Name = "from-id")] long? fromIdMaybe,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe,
         [FromQuery(Name = "search-term")] string searchTerm = "",
         string type = "",
         string country = ""
@@ -30,6 +30,8 @@ public static class Administratives
         {
             return;
         }
+
+        const long LastPossiblePos = 1;
 
         IEnumerable<UserAdminCountry> userAdminCountries = db.Users
             .Where(user => !user.Deleted)
@@ -78,15 +80,23 @@ public static class Administratives
 
         try
         {
-            long fromId = fromIdMaybe ?? filteredUserAdminCountries
-                .Select(uac => uac.User.UserId)
-                .OrderDescending()
+            long? maxId = filteredUserAdminCountries
+                .OrderByDescending(uac => uac.User.UserId)
+                .Select(uac => (long?)uac.User.UserId)
                 .FirstOrDefault();
 
-            var administratives = filteredUserAdminCountries
-                .Where(uac => uac.User.UserId <= fromId)
+            long cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+
+            IEnumerable<UserAdminCountry> paginatedUserAdminCountries = filteredUserAdminCountries
+                .Where(uac => uac.User.UserId < cursorPos)
                 .OrderByDescending(uac => uac.User.UserId)
-                .Take(6) // 50
+                .Take(6); // 50
+
+            long newCursorPos = paginatedUserAdminCountries
+                .Select(uac => uac.User.UserId)
+                .LastOrDefault(LastPossiblePos);
+
+            var administratives = paginatedUserAdminCountries
                 .Select(uac => new
                 {
                     uac.User.Key,
@@ -104,15 +114,11 @@ public static class Administratives
                 Status = "ok",
                 Data = new
                 {
-                    FromId = fromId,
+                    CursorPosition = newCursorPos,
                     Administratives = administratives
                 },
                 IdRolePair = idRolePair
             });
-
-            /* FRONT-END
-            nextFromId = fromId - 50
-            */
         }
         catch (Exception e)
         {

@@ -2,6 +2,9 @@
 
 All GET APIs
 
+# FIXME
+Administratives.ReadAll
+
 # TEST
 Administratives.ReadAll
 

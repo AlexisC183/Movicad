@@ -46,7 +46,7 @@ app.MapGet("/api", () =>
     return Results.File(filePath, "text/html");
 }); //
 
-app.MapGet("/test", (MovicadContext db) =>
+app.MapGet("/test", () =>
 {
 
     return 0;

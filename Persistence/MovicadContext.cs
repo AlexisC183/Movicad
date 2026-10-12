@@ -51,14 +51,15 @@ public partial class MovicadContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder){
         var password = Environment.GetEnvironmentVariable("FINAL_PASS");
         optionsBuilder.UseNpgsql($"Host=localhost;Username=final;Password={password};Database=movicad");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasAnnotation("Npgsql:CollationDefinition:public.case_accent_insensitive", "und-u-ks-level1,und-u-ks-level1,icu,False");
+
         modelBuilder.Entity<Administrative>(entity =>
         {
             entity.HasKey(e => e.UserId).HasName("administratives_pkey");
@@ -70,15 +71,23 @@ public partial class MovicadContext : DbContext
                 .HasColumnName("user_id");
             entity.Property(e => e.Acronym)
                 .HasMaxLength(100)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("acronym");
             entity.Property(e => e.CountryId).HasColumnName("country_id");
             entity.Property(e => e.Icon).HasColumnName("icon");
-            entity.Property(e => e.IconMediaType).HasColumnName("icon_media_type");
+            entity.Property(e => e.IconMediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("icon_media_type");
             entity.Property(e => e.Name)
                 .HasMaxLength(200)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("name");
-            entity.Property(e => e.Type).HasColumnName("type");
-            entity.Property(e => e.Website).HasColumnName("website");
+            entity.Property(e => e.Type)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("type");
+            entity.Property(e => e.Website)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("website");
 
             entity.HasOne(d => d.Country).WithMany(p => p.Administratives)
                 .HasForeignKey(d => d.CountryId)
@@ -99,17 +108,21 @@ public partial class MovicadContext : DbContext
             entity.HasIndex(e => e.Key, "administrative_messages_key_key").IsUnique();
 
             entity.Property(e => e.AdministrativeMessageId).HasColumnName("administrative_message_id");
-            entity.Property(e => e.Body).HasColumnName("body");
+            entity.Property(e => e.Body)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("body");
             entity.Property(e => e.Creation).HasColumnName("creation");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.RecipientId).HasColumnName("recipient_id");
             entity.Property(e => e.SenderId).HasColumnName("sender_id");
             entity.Property(e => e.Subject)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("subject");
 
             entity.HasOne(d => d.Recipient).WithMany(p => p.AdministrativeMessageRecipients)
@@ -137,9 +150,14 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
-            entity.Property(e => e.MediaType).HasColumnName("media_type");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.MediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("media_type");
+            entity.Property(e => e.Name)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("name");
 
             entity.HasOne(d => d.AdministrativeMessage).WithMany(p => p.AdministrativeMessageFiles)
                 .HasForeignKey(d => d.AdministrativeMessageId)
@@ -183,18 +201,24 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.CallForId).HasColumnName("call_for_id");
             entity.Property(e => e.AdministrativeId).HasColumnName("administrative_id");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
-            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Description)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("description");
             entity.Property(e => e.FinalDate).HasColumnName("final_date");
             entity.Property(e => e.InitialDate).HasColumnName("initial_date");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.Modification).HasColumnName("modification");
             entity.Property(e => e.PublishDate).HasColumnName("publish_date");
-            entity.Property(e => e.Requirements).HasColumnName("requirements");
+            entity.Property(e => e.Requirements)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("requirements");
             entity.Property(e => e.Title)
                 .HasMaxLength(200)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("title");
 
             entity.HasOne(d => d.Administrative).WithMany(p => p.CallsFors)
@@ -212,7 +236,9 @@ public partial class MovicadContext : DbContext
             entity.HasIndex(e => e.Name, "countries_name_key").IsUnique();
 
             entity.Property(e => e.CountryId).HasColumnName("country_id");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Name)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("name");
         });
 
         modelBuilder.Entity<DestinationCountry>(entity =>
@@ -248,12 +274,14 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.ApplicationId).HasColumnName("application_id");
             entity.Property(e => e.Content)
                 .HasMaxLength(300)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("content");
             entity.Property(e => e.Creation).HasColumnName("creation");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
 
             entity.HasOne(d => d.Application).WithMany(p => p.ExpulsionReasons)
@@ -276,9 +304,11 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.Title)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("title");
 
             entity.HasOne(d => d.CallFor).WithMany(p => p.FileRequests)
@@ -302,12 +332,18 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
-            entity.Property(e => e.MediaType).HasColumnName("media_type");
+            entity.Property(e => e.MediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("media_type");
             entity.Property(e => e.Modification).HasColumnName("modification");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Name)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("name");
             entity.Property(e => e.Title)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("title");
 
             entity.HasOne(d => d.CallFor).WithMany(p => p.ForumFiles)
@@ -329,13 +365,17 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.CallForId).HasColumnName("call_for_id");
             entity.Property(e => e.Content)
                 .HasMaxLength(1000)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("content");
             entity.Property(e => e.Creation).HasColumnName("creation");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
-            entity.Property(e => e.ImageMediaType).HasColumnName("image_media_type");
+            entity.Property(e => e.ImageMediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("image_media_type");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.UserId).HasColumnName("user_id");
 
@@ -359,15 +399,19 @@ public partial class MovicadContext : DbContext
             entity.HasIndex(e => e.Key, "frequent_questions_key_key").IsUnique();
 
             entity.Property(e => e.FrequentQuestionId).HasColumnName("frequent_question_id");
-            entity.Property(e => e.Answer).HasColumnName("answer");
+            entity.Property(e => e.Answer)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("answer");
             entity.Property(e => e.CallForId).HasColumnName("call_for_id");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.Question)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("question");
 
             entity.HasOne(d => d.CallFor).WithMany(p => p.FrequentQuestions)
@@ -390,11 +434,15 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.Title)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("title");
-            entity.Property(e => e.Url).HasColumnName("url");
+            entity.Property(e => e.Url)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("url");
 
             entity.HasOne(d => d.CallFor).WithMany(p => p.Links)
                 .HasForeignKey(d => d.CallForId)
@@ -415,13 +463,17 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.AttachedImage).HasColumnName("attached_image");
             entity.Property(e => e.Content)
                 .HasMaxLength(1000)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("content");
             entity.Property(e => e.Creation).HasColumnName("creation");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
-            entity.Property(e => e.ImageMediaType).HasColumnName("image_media_type");
+            entity.Property(e => e.ImageMediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("image_media_type");
             entity.Property(e => e.Key)
                 .HasMaxLength(32)
                 .IsFixedLength()
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.UserId).HasColumnName("user_id");
 
@@ -445,12 +497,16 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.ProblemId).HasColumnName("problem_id");
             entity.Property(e => e.AuthorEmail)
                 .HasMaxLength(200)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("author_email");
-            entity.Property(e => e.Body).HasColumnName("body");
+            entity.Property(e => e.Body)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("body");
             entity.Property(e => e.Creation).HasColumnName("creation");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
             entity.Property(e => e.Subject)
                 .HasMaxLength(150)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("subject");
         });
 
@@ -464,9 +520,12 @@ public partial class MovicadContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("user_id");
             entity.Property(e => e.Icon).HasColumnName("icon");
-            entity.Property(e => e.IconMediaType).HasColumnName("icon_media_type");
+            entity.Property(e => e.IconMediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("icon_media_type");
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("name");
 
             entity.HasOne(d => d.User).WithOne(p => p.Student)
@@ -485,9 +544,13 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.FileRequestId).HasColumnName("file_request_id");
             entity.Property(e => e.Content).HasColumnName("content");
             entity.Property(e => e.Deleted).HasColumnName("deleted");
-            entity.Property(e => e.MediaType).HasColumnName("media_type");
+            entity.Property(e => e.MediaType)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("media_type");
             entity.Property(e => e.Modification).HasColumnName("modification");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Name)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("name");
 
             entity.HasOne(d => d.Application).WithMany(p => p.StudentFiles)
                 .HasForeignKey(d => d.ApplicationId)
@@ -513,12 +576,15 @@ public partial class MovicadContext : DbContext
             entity.Property(e => e.Deleted).HasColumnName("deleted");
             entity.Property(e => e.Key)
                 .HasMaxLength(50)
+                .UseCollation("case_accent_insensitive")
                 .HasColumnName("key");
             entity.Property(e => e.Password)
                 .HasMaxLength(60)
                 .IsFixedLength()
                 .HasColumnName("password");
-            entity.Property(e => e.Role).HasColumnName("role");
+            entity.Property(e => e.Role)
+                .UseCollation("case_accent_insensitive")
+                .HasColumnName("role");
 
             entity.HasMany(d => d.Administratives).WithMany(p => p.Senders)
                 .UsingEntity<Dictionary<string, object>>(
