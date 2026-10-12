@@ -80,12 +80,20 @@ public static class Administratives
 
         try
         {
-            long? maxId = filteredUserAdminCountries
-                .OrderByDescending(uac => uac.User.UserId)
-                .Select(uac => (long?)uac.User.UserId)
-                .FirstOrDefault();
+            long cursorPos;
 
-            long cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            if (cursorPosMaybe.HasValue)
+            {
+                cursorPos = cursorPosMaybe.Value;
+            }
+            else
+            {
+                long? maxId = filteredUserAdminCountries
+                    .OrderByDescending(uac => uac.User.UserId)
+                    .Select(uac => (long?)uac.User.UserId)
+                    .FirstOrDefault();
+                cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            }
 
             IEnumerable<UserAdminCountry> paginatedUserAdminCountries = filteredUserAdminCountries
                 .Where(uac => uac.User.UserId < cursorPos)
