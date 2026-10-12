@@ -55,6 +55,7 @@ app.MapGet("/test", () =>
 app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create);
 
 app.MapGet("/api/administratives/read", Administratives.ReadAll);
+app.MapGet("/api/administratives/read/{key}", Administratives.Read);
 
 app.MapPost("/api/applications/create", Applications.Create);
 app.MapPatch("/api/applications/undo-expulsion", Applications.UndoExpulsion);

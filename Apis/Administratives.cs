@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Movicad.Persistence;
 using Movicad.Utils;
 
@@ -6,6 +7,107 @@ namespace Movicad.Apis;
 
 public static class Administratives
 {
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task Read(
+        HttpContext http,
+        MovicadContext db,
+        string key
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedKey = key.Trim();
+
+        try
+        {
+            var adminJoin = db.Users
+                .Where(user =>
+                    !user.Deleted &&
+                    user.Key == trimmedKey
+                )
+                .Join(
+                    db.Administratives,
+                    user => user.UserId,
+                    admin => admin.UserId,
+                    (user, admin) => new
+                    {
+                        user.UserId,
+                        user.Key,
+                        admin.Acronym,
+                        admin.Icon,
+                        admin.IconMediaType,
+                        admin.Name,
+                        admin.Type,
+                        admin.CountryId,
+                        admin.Website
+                    }
+                )
+                .LeftJoin(
+                    db.Countries,
+                    admin => admin.CountryId,
+                    country => country.CountryId,
+                    (admin, country) => new
+                    {
+                        admin.UserId,
+                        admin.Key,
+                        admin.Acronym,
+                        admin.Icon,
+                        admin.IconMediaType,
+                        admin.Name,
+                        admin.Type,
+                        Country = country == null ? null : country.Name,
+                        admin.Website
+                    }
+                )
+                .SingleOrDefault();
+
+            if (adminJoin is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            // Ratings from deleted users are also counted
+            long ratings = await db.Database.SqlQuery<long>($"""
+                select count(*) as "Value" from ratings
+                where administrative_id = {adminJoin.UserId}
+            """).SingleAsync();
+
+            var admin = new
+            {
+                adminJoin.Key,
+                adminJoin.Acronym,
+                adminJoin.Icon,
+                adminJoin.IconMediaType,
+                adminJoin.Name,
+                adminJoin.Type,
+                adminJoin.Country,
+                adminJoin.Website,
+                Ratings = ratings
+            };
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = admin,
+                IdRolePair = idRolePair
+            });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
     /// <summary>
     /// GET
     /// </summary>
