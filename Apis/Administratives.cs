@@ -6,12 +6,6 @@ namespace Movicad.Apis;
 
 public static class Administratives
 {
-    // public record UserAdminCountry(
-    //     User User,
-    //     Administrative Admin,
-    //     Country? Country
-    // );
-
     /// <summary>
     /// GET
     /// </summary>
@@ -32,6 +26,7 @@ public static class Administratives
         }
 
         const long LastPossiblePos = 1;
+        const int PageSize = 20;
 
         var joins = db.Users
             .Where(user => !user.Deleted)
@@ -109,12 +104,12 @@ public static class Administratives
             var paginatedJoins = filteredJoins
                 .Where(admin => admin.UserId < cursorPos)
                 .OrderByDescending(admin => admin.UserId)
-                .Take(6) // 20
+                .Take(PageSize)
                 .ToList();
 
             long newCursorPos = paginatedJoins
-                .Select(admin => admin.UserId)
-                .LastOrDefault(LastPossiblePos);
+                .Select(admin => (long?)admin.UserId)
+                .ElementAtOrDefault(PageSize - 1) ?? LastPossiblePos;
 
             var administratives = paginatedJoins
                 .Select(admin => new
