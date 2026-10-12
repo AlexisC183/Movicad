@@ -1,10 +1,7 @@
 # TODO
-
 All GET APIs
 
 # FIXME
-Administratives.ReadAll doesn't respect collation when filtering by searchTerm.
-Removing the record and using implicit types was tested but there was a LINQ translation error.
 
 # TEST
 Administratives.ReadAll

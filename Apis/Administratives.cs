@@ -6,11 +6,11 @@ namespace Movicad.Apis;
 
 public static class Administratives
 {
-    public record UserAdminCountry(
-        User User,
-        Administrative Admin,
-        Country? Country
-    );
+    // public record UserAdminCountry(
+    //     User User,
+    //     Administrative Admin,
+    //     Country? Country
+    // );
 
     /// <summary>
     /// GET
@@ -33,49 +33,60 @@ public static class Administratives
 
         const long LastPossiblePos = 1;
 
-        IEnumerable<UserAdminCountry> userAdminCountries = db.Users
+        var joins = db.Users
             .Where(user => !user.Deleted)
             .Join(
                 db.Administratives,
                 user => user.UserId,
                 admin => admin.UserId,
-                (user, admin) => new { user, admin }
+                (user, admin) => new
+                {
+                    user.UserId,
+                    user.Key,
+                    admin.Acronym,
+                    admin.Name,
+                    admin.Type,
+                    admin.CountryId,
+                    admin.Icon,
+                    admin.IconMediaType
+                }
             )
             .LeftJoin(
                 db.Countries,
-                userAdmin => userAdmin.admin.CountryId,
+                admin => admin.CountryId,
                 country => country.CountryId,
-                (userAdmin, country) => new UserAdminCountry(
-                    userAdmin.user,
-                    userAdmin.admin,
-                    country
-                )
+                (admin, country) => new
+                {
+                    admin.UserId,
+                    admin.Key,
+                    admin.Acronym,
+                    admin.Name,
+                    admin.Type,
+                    Country = country == null ? null : country.Name,
+                    admin.Icon,
+                    admin.IconMediaType
+                }
             );
 
-        IEnumerable<UserAdminCountry> filteredUserAdminCountries;
+        var filteredJoins = joins;
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             string trimmedSearchTerm = searchTerm.Trim();
-            filteredUserAdminCountries = userAdminCountries
-                .Where(uac =>
-                    uac.Admin.Name.Contains(trimmedSearchTerm) ||
-                    uac.Admin.Acronym.Contains(trimmedSearchTerm) ||
-                    uac.User.Key.Contains(trimmedSearchTerm)
+            filteredJoins = joins
+                .Where(admin =>
+                    admin.Name.Contains(trimmedSearchTerm) ||
+                    admin.Acronym.Contains(trimmedSearchTerm) ||
+                    admin.Key.Contains(trimmedSearchTerm)
                 );
         }
         else if (!string.IsNullOrWhiteSpace(type))
         {
-            filteredUserAdminCountries = userAdminCountries.Where(uac => uac.Admin.Type == type);
+            filteredJoins = joins.Where(admin => admin.Type == type);
         }
         else if (!string.IsNullOrWhiteSpace(country))
         {
-            filteredUserAdminCountries = userAdminCountries
-                .Where(uac => uac.Country is Country c && c.Name == country);
-        }
-        else
-        {
-            filteredUserAdminCountries = userAdminCountries;
+            filteredJoins = joins.Where(admin => admin.Country == country);
         }
 
         try
@@ -88,31 +99,32 @@ public static class Administratives
             }
             else
             {
-                long? maxId = filteredUserAdminCountries
-                    .OrderByDescending(uac => uac.User.UserId)
-                    .Select(uac => (long?)uac.User.UserId)
+                long? maxId = filteredJoins
+                    .OrderByDescending(admin => admin.UserId)
+                    .Select(admin => (long?)admin.UserId)
                     .FirstOrDefault();
                 cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
             }
 
-            IEnumerable<UserAdminCountry> paginatedUserAdminCountries = filteredUserAdminCountries
-                .Where(uac => uac.User.UserId < cursorPos)
-                .OrderByDescending(uac => uac.User.UserId)
-                .Take(6); // 50
+            var paginatedJoins = filteredJoins
+                .Where(admin => admin.UserId < cursorPos)
+                .OrderByDescending(admin => admin.UserId)
+                .Take(6) // 20
+                .ToList();
 
-            long newCursorPos = paginatedUserAdminCountries
-                .Select(uac => uac.User.UserId)
+            long newCursorPos = paginatedJoins
+                .Select(admin => admin.UserId)
                 .LastOrDefault(LastPossiblePos);
 
-            var administratives = paginatedUserAdminCountries
-                .Select(uac => new
+            var administratives = paginatedJoins
+                .Select(admin => new
                 {
-                    uac.User.Key,
-                    uac.Admin.Name,
-                    uac.Admin.Type,
-                    Country = uac.Country?.Name,
-                    uac.Admin.Icon,
-                    uac.Admin.IconMediaType
+                    admin.Key,
+                    admin.Name,
+                    admin.Type,
+                    admin.Country,
+                    admin.Icon,
+                    admin.IconMediaType
                 })
                 .ToArray();
 
