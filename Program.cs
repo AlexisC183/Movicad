@@ -61,6 +61,7 @@ app.MapPost("/api/applications/create", Applications.Create);
 app.MapPatch("/api/applications/undo-expulsion", Applications.UndoExpulsion);
 app.MapDelete("/api/applications/delete", Applications.Delete);
 
+app.MapGet("/api/calls-for/read", CallForDelegates.ReadAll);
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 app.MapPatch("/api/calls-for/update", CallForDelegates.Update);
 app.MapDelete("/api/calls-for/delete", CallForDelegates.Delete);

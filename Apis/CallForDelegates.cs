@@ -8,6 +8,196 @@ namespace Movicad.Apis;
 
 public static class CallForDelegates
 {
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task ReadAll(
+        HttpContext http,
+        MovicadContext db,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe,
+        [FromQuery(Name = "search-term")] string searchTerm = "",
+        string country = "",
+        [FromQuery(Name = "admin-key")] string adminKey = "",
+        [FromQuery(Name = "open-only")] bool openOnly = false
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        const long LastPossiblePos = 1;
+        const int PageSize = 20;
+        DateTime now = DateTime.UtcNow;
+
+        var normalizedCallFors = db.CallsFors
+            .Select(cf => new CallsFor()
+            {
+                CallForId = cf.CallForId,
+                Key = cf.Key,
+                Title = cf.Title,
+                InitialDate = cf.InitialDate == null
+                ?
+                    new(DateTime.MinValue.Ticks, DateTimeKind.Utc)
+                :
+                    cf.InitialDate,
+                FinalDate = cf.FinalDate == null
+                ?
+                    new(DateTime.MaxValue.Ticks, DateTimeKind.Utc)
+                :
+                    cf.FinalDate,
+                Description = cf.Description,
+                Requirements = cf.Requirements,
+                PublishDate = cf.PublishDate,
+                Modification = cf.Modification,
+                AdministrativeId = cf.AdministrativeId,
+                Deleted = cf.Deleted
+            });
+
+        var joins = (openOnly
+            ?
+                normalizedCallFors.Where(cf =>
+                    !cf.Deleted &&
+                    now >= cf.InitialDate &&
+                    now <= cf.FinalDate
+                )
+            :
+                normalizedCallFors.Where(cf => !cf.Deleted)
+        )
+            .Join(
+                db.Administratives,
+                cf => cf.AdministrativeId,
+                admin => admin.UserId,
+                (cf, admin) => new
+                {
+                    admin.UserId,
+                    admin.Icon,
+                    admin.IconMediaType,
+                    cf.CallForId,
+                    CallForKey = cf.Key,
+                    cf.Title,
+                    cf.PublishDate
+                }
+            )
+            .Join(
+                db.Users,
+                cf => cf.UserId,
+                user => user.UserId,
+                (cf, user) => new
+                {
+                    AdminKey = user.Key,
+                    cf.Icon,
+                    cf.IconMediaType,
+                    cf.CallForId,
+                    cf.CallForKey,
+                    cf.Title,
+                    cf.PublishDate
+                }
+            )
+            .GroupJoin(
+                db.DestinationCountries,
+                cf => cf.CallForId,
+                destCountry => destCountry.CallForId,
+                (cf, destCountries) => new
+                {
+                    cf.AdminKey,
+                    cf.Icon,
+                    cf.IconMediaType,
+                    cf.CallForId,
+                    cf.CallForKey,
+                    cf.Title,
+                    cf.PublishDate,
+                    Countries = destCountries
+                        .Join(
+                            db.Countries,
+                            destCountry => destCountry.CountryId,
+                            country => country.CountryId,
+                            (_, country) => country.Name
+                        )
+                        .ToArray()
+                }
+            );
+        
+        var filteredJoins = joins;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            string trimmedSearchTerm = searchTerm.Trim();
+            filteredJoins = joins
+                .Where(cf =>
+                    cf.Title.Contains(trimmedSearchTerm) ||
+                    cf.CallForKey == trimmedSearchTerm
+                );
+        }
+        else if (!string.IsNullOrWhiteSpace(country))
+        {
+            filteredJoins = joins.Where(cf => cf.Countries.Contains(country));
+        }
+        else if (!string.IsNullOrWhiteSpace(adminKey))
+        {
+            string trimmedAdminKey = adminKey.Trim();
+            filteredJoins = joins.Where(cf => cf.AdminKey == trimmedAdminKey);
+        }
+
+        try
+        {
+            long cursorPos;
+
+            if (cursorPosMaybe.HasValue)
+            {
+                cursorPos = cursorPosMaybe.Value;
+            }
+            else
+            {
+                long? maxId = filteredJoins
+                    .OrderByDescending(cf => cf.CallForId)
+                    .Select(cf => (long?)cf.CallForId)
+                    .FirstOrDefault();
+                cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            }
+
+            var paginatedJoins = filteredJoins
+                .Where(cf => cf.CallForId < cursorPos)
+                .OrderByDescending(cf => cf.CallForId)
+                .Take(PageSize)
+                .ToList();
+
+            long newCursorPos = paginatedJoins
+                .Select(cf => (long?)cf.CallForId)
+                .ElementAtOrDefault(PageSize - 1) ?? LastPossiblePos;
+
+            var callsFor = paginatedJoins
+                .Select(cf => new
+                {
+                    cf.Icon,
+                    cf.IconMediaType,
+                    Key = cf.CallForKey,
+                    cf.Title,
+                    cf.PublishDate,
+                    cf.Countries
+                })
+                .ToArray();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    CursorPosition = newCursorPos,
+                    CallsFor = callsFor
+                },
+                IdRolePair = idRolePair
+            });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
     public record CreateReq(
         string Title,
         string Description,
