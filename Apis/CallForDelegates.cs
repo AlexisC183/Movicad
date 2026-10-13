@@ -11,6 +11,112 @@ public static class CallForDelegates
     /// <summary>
     /// GET
     /// </summary>
+    public static async Task Read(
+        HttpContext http,
+        MovicadContext db,
+        string key
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedKey = key.Trim();
+
+        try
+        {
+            var callForJoin = db.CallsFors
+                .Where(cf =>
+                    !cf.Deleted &&
+                    cf.Key == trimmedKey
+                )
+                .Join(
+                    db.Administratives,
+                    cf => cf.AdministrativeId,
+                    admin => admin.UserId,
+                    (cf, admin) => new
+                    {
+                        admin.UserId,
+                        admin.Acronym,
+                        cf.CallForId,
+                        cf.Title,
+                        cf.Description,
+                        cf.Requirements,
+                        cf.InitialDate,
+                        cf.FinalDate,
+                        cf.Modification
+                    }
+                )
+                .Join(
+                    db.Users,
+                    cf => cf.UserId,
+                    user => user.UserId,
+                    (cf, user) => new
+                    {
+                        AdminKey = user.Key,
+                        cf.Acronym,
+                        cf.CallForId,
+                        cf.Title,
+                        cf.Description,
+                        cf.Requirements,
+                        cf.InitialDate,
+                        cf.FinalDate,
+                        cf.Modification
+                    }
+                )
+                .GroupJoin(
+                    db.DestinationCountries,
+                    cf => cf.CallForId,
+                    destCountry => destCountry.CallForId,
+                    (cf, destCountries) => new
+                    {
+                        cf.AdminKey,
+                        cf.Acronym,
+                        cf.Title,
+                        cf.Description,
+                        cf.Requirements,
+                        cf.InitialDate,
+                        cf.FinalDate,
+                        cf.Modification,
+                        Countries = destCountries
+                            .Join(
+                                db.Countries,
+                                destCountry => destCountry.CountryId,
+                                country => country.CountryId,
+                                (_, country) => country.Name
+                            )
+                            .ToArray()
+                    }
+                )
+                .SingleOrDefault();
+
+            if (callForJoin is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = callForJoin,
+                IdRolePair = idRolePair
+            });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    /// <summary>
+    /// GET
+    /// </summary>
     public static async Task ReadAll(
         HttpContext http,
         MovicadContext db,
