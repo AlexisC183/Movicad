@@ -57,6 +57,7 @@ public static class CallForDelegates
                     (cf, user) => new
                     {
                         AdminKey = user.Key,
+                        UserDeleted = user.Deleted,
                         cf.Acronym,
                         cf.CallForId,
                         cf.Title,
@@ -67,6 +68,7 @@ public static class CallForDelegates
                         cf.Modification
                     }
                 )
+                .Where(cf => !cf.UserDeleted)
                 .GroupJoin(
                     db.DestinationCountries,
                     cf => cf.CallForId,
@@ -194,6 +196,7 @@ public static class CallForDelegates
                 (cf, user) => new
                 {
                     AdminKey = user.Key,
+                    UserDeleted = user.Deleted,
                     cf.Icon,
                     cf.IconMediaType,
                     cf.CallForId,
@@ -202,6 +205,7 @@ public static class CallForDelegates
                     cf.PublishDate
                 }
             )
+            .Where(cf => !cf.UserDeleted)
             .GroupJoin(
                 db.DestinationCountries,
                 cf => cf.CallForId,

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
@@ -6,6 +7,158 @@ namespace Movicad.Apis;
 
 public static class PrivateMessages
 {
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task ReadBy(
+        HttpContext http,
+        MovicadContext db,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe,
+        [FromQuery(Name = "student-key")] string studentKey = "",
+        [FromQuery(Name = "call-for-key")] string callForKey = ""
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        const long LastPossiblePos = 1;
+        const int PageSize = 20;
+        string trimmedStudentKey = studentKey.Trim();
+        string trimmedCallForKey = callForKey.Trim();
+
+        try
+        {
+            User? student = db.Users.SingleOrDefault(user =>
+                user.Key == trimmedStudentKey &&
+                !user.Deleted
+            );
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+            if (student is null || callFor is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            Application? application = db.Applications
+                .SingleOrDefault(appl =>
+                    appl.StudentId == student.UserId &&
+                    appl.CallForId == callFor.CallForId &&
+                    !appl.Deleted
+                );
+            if (application is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            User? requester = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+            if (requester is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!(
+                requester.UserId == student.UserId ||
+                requester.UserId == callFor.AdministrativeId
+            ))
+            {
+                http.Response.StatusCode = 403;
+                await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
+                return;
+            }
+
+            var joins = db.Users
+                .LeftJoin(
+                    db.Administratives,
+                    user => user.UserId,
+                    admin => admin.UserId,
+                    (user, admin) => new
+                    {
+                        user.UserId,
+                        user.Role,
+                        Administrative = admin == null
+                        ?
+                            null
+                        :
+                            new
+                            {
+                                admin.Acronym,
+                                admin.Icon,
+                                admin.IconMediaType
+                            }
+                    }
+                )
+                .LeftJoin(
+                    db.Students,
+                    user => user.UserId,
+                    student => student.UserId,
+                    (user, student) => new
+                    {
+                        user.UserId,
+                        user.Role,
+                        user.Administrative,
+                        Student = student == null
+                        ?
+                            null
+                        :
+                            new
+                            {
+                                student.Name,
+                                student.Icon,
+                                student.IconMediaType
+                            }
+                    }
+                )
+                .Join(
+                    db.PrivateMessages,
+                    user => user.UserId,
+                    msg => msg.UserId,
+                    (user, msg) => new
+                    {
+                        user.Role,
+                        msg.PrivateMessageId,
+                        msg.Key,
+                        msg.ApplicationId,
+                        user.Administrative,
+                        user.Student,
+                        msg.Creation,
+                        msg.Content,
+                        msg.AttachedImage,
+                        msg.ImageMediaType,
+                        msg.Deleted
+                    }
+                )
+                .Where(msg =>
+                    !msg.Deleted &&
+                    msg.ApplicationId == application.ApplicationId
+                );
+
+
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
     public record CreateReq(
         string Content,
         string? AttachedImageUri,
