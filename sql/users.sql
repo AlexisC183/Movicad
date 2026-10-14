@@ -70,6 +70,26 @@ JOIN users AS u ON u.key = a.key;
 
 COMMIT;
 
+-- Human-generated
+begin;
+INSERT INTO users (key, role, password, creation, deleted) values
+('estudiante1', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false),
+('estudiante2', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false),
+('estudiante3', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false),
+('estudiante4', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false),
+('estudiante5', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false),
+('estudiante6', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', true),
+('estudiante7', 'estudiante', '$2a$11$zxaBHeUWXW39XgAqCnhPAujqyEVPZeBGR47yMalGzA3nghPpJwe4q', '2026-10-13', false);
+insert into students values
+(26, 'alex', ''::bytea, 'image/png'),
+(27, 'Sergio', ''::bytea, 'image/png'),
+(28, '', ''::bytea, 'image/png'),
+(29, 'Martha', ''::bytea, 'image/png'),
+(30, 'Alicia Sánchez', ''::bytea, 'image/png'),
+(31, 'Letty', ''::bytea, 'image/png'),
+(32, 'JP', ''::bytea, 'image/png');
+commit;
+
 -- For AI
 /*create table users (
     user_id bigserial primary key,

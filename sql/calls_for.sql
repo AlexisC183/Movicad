@@ -287,7 +287,7 @@ FROM (
     ('3d4e5f60718293a4b5c6d7e8f901a2b3', 220::bigint, false)
 ) AS d(call_for_key, country_id, deleted)
 JOIN calls_for AS c ON c.key = d.call_for_key;
-
+update calls_for set administrative_id = 1 where call_for_id = 3;
 COMMIT;
 
 -- For AI
