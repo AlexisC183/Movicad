@@ -5,13 +5,11 @@ insert into applications (
 	banned,
 	deleted
 ) values
-(26, 1, false, false), -- private chat, admin sends first
-(26, 2, false, false), -- other, just applied
-(27, 1, false, false), -- public chat
-(28, 6, false, false), -- private chat other, student sends first
-(29, 1, false, false), -- just applied
-(30, 1, false, true),  -- left
-(31, 1, false, false); -- private chat, student sends first, (deleted acc)
--- student 32 has no interactions
--- test call_for 3, which belongs to administrative 1
+(26, 1, false, false),
+(26, 2, false, false), 
+(27, 1, false, false),
+(28, 6, false, false),
+(29, 1, false, false),
+(30, 1, false, true),
+(31, 1, false, false);
 commit;
