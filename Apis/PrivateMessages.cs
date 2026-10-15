@@ -151,7 +151,56 @@ public static class PrivateMessages
                     msg.ApplicationId == application.ApplicationId
                 );
 
+            long cursorPos;
 
+            if (cursorPosMaybe.HasValue)
+            {
+                cursorPos = cursorPosMaybe.Value;
+            }
+            else
+            {
+                long? maxId = joins
+                    .OrderByDescending(msg => msg.PrivateMessageId)
+                    .Select(msg => (long?)msg.PrivateMessageId)
+                    .FirstOrDefault();
+                cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            }
+
+            var paginatedJoins = joins
+                .Where(msg => msg.PrivateMessageId < cursorPos)
+                .OrderByDescending(msg => msg.PrivateMessageId)
+                .Take(PageSize)
+                .ToList();
+
+            long newCursorPos = paginatedJoins
+                .Select(msg => (long?)msg.PrivateMessageId)
+                .ElementAtOrDefault(PageSize - 1) ?? LastPossiblePos;
+
+            var privateMessages = paginatedJoins
+                .Select(msg => new
+                {
+                    msg.Key,
+                    msg.Role,
+                    msg.Administrative,
+                    msg.Student,
+                    msg.Creation,
+                    msg.Content,
+                    msg.AttachedImage,
+                    msg.ImageMediaType
+                })
+                .ToArray();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    CursorPosition = newCursorPos,
+                    PrivateMessages = privateMessages
+                },
+                IdRolePair = idRolePair
+            });
         }
         catch (Exception e)
         {

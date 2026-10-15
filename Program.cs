@@ -75,6 +75,7 @@ app.MapPost("/api/forum-files/create", ForumFiles.Create);
 app.MapPatch("/api/forum-files/update", ForumFiles.Update);
 app.MapDelete("/api/forum-files/delete", ForumFiles.Delete);
 
+app.MapGet("/api/forum-messages/read", ForumMessages.ReadBy);
 app.MapPost("/api/forum-messages/create", ForumMessages.Create);
 
 app.MapPost("/api/frequent-questions/create", FrequentQuestions.Create);
@@ -85,6 +86,7 @@ app.MapPost("/api/links/create", Links.Create);
 app.MapPatch("/api/links/update", Links.Update);
 app.MapDelete("/api/links/delete", Links.Delete);
 
+app.MapGet("/api/private-messages/read", PrivateMessages.ReadBy);
 app.MapPost("/api/private-messages/create", PrivateMessages.Create);
 
 app.MapPost("/api/problems/create", Problems.Create);
