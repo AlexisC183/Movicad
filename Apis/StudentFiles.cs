@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Movicad.Persistence;
 using Movicad.Utils;
 
@@ -5,6 +6,104 @@ namespace Movicad.Apis;
 
 public static class StudentFiles
 {
+    public static async Task ReadBy(
+        HttpContext http,
+        MovicadContext db,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe,
+        [FromQuery(Name = "student-key")] string studentKey = "",
+        [FromQuery(Name = "call-for-key")] string callForKey = ""
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        const long LastPossiblePos = 1;
+        const int PageSize = 20;
+        string trimmedStudentKey = studentKey.Trim();
+        string trimmedCallForKey = callForKey.Trim();
+
+        try
+        {
+            User? student = db.Users.SingleOrDefault(user =>
+                user.Key == trimmedStudentKey &&
+                !user.Deleted
+            );
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+            if (student is null || callFor is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            Application? application = db.Applications
+                .SingleOrDefault(appl =>
+                    appl.StudentId == student.UserId &&
+                    appl.CallForId == callFor.CallForId &&
+                    !appl.Deleted
+                );
+            if (application is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            User? requester = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+            if (requester is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!(
+                requester.UserId == student.UserId ||
+                requester.UserId == callFor.AdministrativeId
+            ))
+            {
+                http.Response.StatusCode = 403;
+                await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
+                return;
+            }
+
+            // keys of reqs <- to render the UI
+            // keys of files <- 'read/{key}' endpoint
+            var joins = db.StudentFiles
+                .Where(file =>
+                    file.ApplicationId == application.ApplicationId &&
+                    !file.Deleted
+                )
+                .RightJoin(
+                    db.FileRequests,
+                    file => file.FileRequestId,
+                    req => req.FileRequestId,
+                    (file, req) => new
+                    {
+                        
+                    }
+                )
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
     public record CreateReq(
         string FileRequestKey,
         string Name,
