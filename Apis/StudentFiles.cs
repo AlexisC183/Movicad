@@ -22,7 +22,7 @@ public static class StudentFiles
         }
 
         const long LastPossiblePos = 1;
-        const int PageSize = 3; // 20
+        const int PageSize = 20;
         string trimmedStudentKey = studentKey.Trim();
         string trimmedCallForKey = callForKey.Trim();
 
@@ -81,68 +81,37 @@ public static class StudentFiles
                 return;
             }
 
-            // var joins = db.FileRequests
-            //     .Where(req =>
-            //         req.CallForId == callFor.CallForId &&
-            //         !req.Deleted
-            //     )
-            //     .LeftJoin(
-            //         db.StudentFiles,
-            //         req => req.FileRequestId,
-            //         file => file.FileRequestId,
-            //         (req, file) => new
-            //         {
-            //             req.FileRequestId,
-            //             FileRequestKey = req.Key,
-            //             req.Title,
-            //             UploadedFile = file == null
-            //             ?
-            //                 null
-            //             :
-            //                 new
-            //                 {
-            //                     file.ApplicationId,
-            //                     Key = file.ApplicationId + "," + file.FileRequestId,
-            //                     file.Name,
-            //                     Size = file.Content.Length,
-            //                     file.Modification
-            //                 }
-            //         }
-            //     )
-            //     .Where(e =>
-            //         e.UploadedFile == null ||
-            //         e.UploadedFile.ApplicationId == application.ApplicationId
-            //     );
             var joins = db.FileRequests
                 .Where(req =>
                     req.CallForId == callFor.CallForId &&
                     !req.Deleted
                 )
-                .LeftJoin(
+                .GroupJoin(
                     db.StudentFiles,
                     req => req.FileRequestId,
                     file => file.FileRequestId,
-                    (req, file) => new { req, file }
-                )
-                .Where(e =>
-                    e.file == null ||
-                    e.file.ApplicationId == application.ApplicationId
+                    (req, files) => new
+                    {
+                        Req = req,
+                        FileMaybe = files
+                            .SingleOrDefault(file => file.ApplicationId == application.ApplicationId)
+                    }
                 )
                 .Select(e => new
                 {
-                    e.req.FileRequestId,
-                    FileRequestKey = e.req.Key,
-                    e.req.Title,
-                    UploadedFile = e.file == null
+                    e.Req.FileRequestId,
+                    FileRequestKey = e.Req.Key,
+                    e.Req.Title,
+                    UploadedFile = e.FileMaybe == null
                     ?
                         null
                     :
                         new
                         {
-                            Key = e.file.ApplicationId + "," + e.file.FileRequestId,
-                            e.file.Name,
-                            Size = e.file.Content.Length,
-                            e.file.Modification
+                            Key = $"{e.FileMaybe.ApplicationId},{e.FileMaybe.FileRequestId}",
+                            e.FileMaybe.Name,
+                            Size = e.FileMaybe.Content.Length,
+                            e.FileMaybe.Modification
                         }
                 });
 
