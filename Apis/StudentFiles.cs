@@ -22,7 +22,7 @@ public static class StudentFiles
         }
 
         const long LastPossiblePos = 1;
-        const int PageSize = 20;
+        const int PageSize = 3; // 20
         string trimmedStudentKey = studentKey.Trim();
         string trimmedCallForKey = callForKey.Trim();
 
@@ -81,22 +81,116 @@ public static class StudentFiles
                 return;
             }
 
-            // keys of reqs <- to render the UI
-            // keys of files <- 'read/{key}' endpoint
-            var joins = db.StudentFiles
-                .Where(file =>
-                    file.ApplicationId == application.ApplicationId &&
-                    !file.Deleted
+            // var joins = db.FileRequests
+            //     .Where(req =>
+            //         req.CallForId == callFor.CallForId &&
+            //         !req.Deleted
+            //     )
+            //     .LeftJoin(
+            //         db.StudentFiles,
+            //         req => req.FileRequestId,
+            //         file => file.FileRequestId,
+            //         (req, file) => new
+            //         {
+            //             req.FileRequestId,
+            //             FileRequestKey = req.Key,
+            //             req.Title,
+            //             UploadedFile = file == null
+            //             ?
+            //                 null
+            //             :
+            //                 new
+            //                 {
+            //                     file.ApplicationId,
+            //                     Key = file.ApplicationId + "," + file.FileRequestId,
+            //                     file.Name,
+            //                     Size = file.Content.Length,
+            //                     file.Modification
+            //                 }
+            //         }
+            //     )
+            //     .Where(e =>
+            //         e.UploadedFile == null ||
+            //         e.UploadedFile.ApplicationId == application.ApplicationId
+            //     );
+            var joins = db.FileRequests
+                .Where(req =>
+                    req.CallForId == callFor.CallForId &&
+                    !req.Deleted
                 )
-                .RightJoin(
-                    db.FileRequests,
-                    file => file.FileRequestId,
+                .LeftJoin(
+                    db.StudentFiles,
                     req => req.FileRequestId,
-                    (file, req) => new
-                    {
-                        
-                    }
+                    file => file.FileRequestId,
+                    (req, file) => new { req, file }
                 )
+                .Where(e =>
+                    e.file == null ||
+                    e.file.ApplicationId == application.ApplicationId
+                )
+                .Select(e => new
+                {
+                    e.req.FileRequestId,
+                    FileRequestKey = e.req.Key,
+                    e.req.Title,
+                    UploadedFile = e.file == null
+                    ?
+                        null
+                    :
+                        new
+                        {
+                            Key = e.file.ApplicationId + "," + e.file.FileRequestId,
+                            e.file.Name,
+                            Size = e.file.Content.Length,
+                            e.file.Modification
+                        }
+                });
+
+            long cursorPos;
+
+            if (cursorPosMaybe.HasValue)
+            {
+                cursorPos = cursorPosMaybe.Value;
+            }
+            else
+            {
+                long? maxId = joins
+                    .OrderByDescending(e => e.FileRequestId)
+                    .Select(e => (long?)e.FileRequestId)
+                    .FirstOrDefault();
+                cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            }
+
+            var paginatedJoins = joins
+                .Where(e => e.FileRequestId < cursorPos)
+                .OrderByDescending(e => e.FileRequestId)
+                .Take(PageSize)
+                .ToList();
+
+            long newCursorPos = paginatedJoins
+                .Select(e => (long?)e.FileRequestId)
+                .ElementAtOrDefault(PageSize - 1) ?? LastPossiblePos;
+
+            var fileEntries = paginatedJoins
+                .Select(e => new
+                {
+                    e.FileRequestKey,
+                    e.Title,
+                    e.UploadedFile
+                })
+                .ToArray();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    CursorPosition = newCursorPos,
+                    FileEntries = fileEntries
+                },
+                IdRolePair = idRolePair
+            });
         }
         catch (Exception e)
         {
