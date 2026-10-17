@@ -119,6 +119,166 @@ public static class CallForDelegates
     /// <summary>
     /// GET
     /// </summary>
+    public static async Task ReadByStudent(
+        HttpContext http,
+        MovicadContext db,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        const long LastPossiblePos = 1;
+        const int PageSize = 20;
+
+        try
+        {
+            User? student = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (student is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            var studentApplications = db.Applications
+                .Where(appl =>
+                    appl.StudentId == student.UserId &&
+                    !appl.Deleted
+                );
+            var users = db.Users.Where(user => !user.Deleted);
+            var userAdmins = users
+                .Join(
+                    db.Administratives,
+                    user => user.UserId,
+                    admin => admin.UserId,
+                    (user, admin) => new { user, admin }
+                );
+            var callsFor = db.CallsFors.Where(callFor => !callFor.Deleted);
+            var destinationCountries = db.DestinationCountries.Where(dc => !dc.Deleted);
+            var joins = studentApplications
+                .Join(
+                    callsFor,
+                    appl => appl.CallForId,
+                    callFor => callFor.CallForId,
+                    (appl, callFor) => new
+                    {
+                        appl.ApplicationId, // For pagination,
+                        CallForKey = callFor.Key, // To render the UI
+                        callFor.CallForId,
+                        callFor.Title,
+                        callFor.PublishDate,
+                        callFor.AdministrativeId
+                    }
+                )
+                .Join(
+                    userAdmins,
+                    cf => cf.AdministrativeId,
+                    userAdmin => userAdmin.admin.UserId,
+                    (cf, userAdmin) => new
+                    {
+                        cf.ApplicationId,
+                        cf.CallForId,
+                        cf.CallForKey,
+                        cf.Title,
+                        cf.PublishDate,
+                        userAdmin.admin.Icon,
+                        userAdmin.admin.IconMediaType
+                    }
+                )
+                .GroupJoin(
+                    destinationCountries,
+                    cf => cf.CallForId,
+                    destCountry => destCountry.CallForId,
+                    (cf, destCountries) => new
+                    {
+                        cf.ApplicationId,
+                        cf.CallForKey,
+                        cf.Title,
+                        cf.PublishDate,
+                        cf.Icon,
+                        cf.IconMediaType,
+                        Countries = destCountries
+                            .Join(
+                                db.Countries,
+                                destCountry => destCountry.CountryId,
+                                country => country.CountryId,
+                                (_, country) => country.Name
+                            )
+                            .ToArray()
+                    }
+                );
+            
+            long cursorPos;
+
+            if (cursorPosMaybe.HasValue)
+            {
+                cursorPos = cursorPosMaybe.Value;
+            }
+            else
+            {
+                long? maxId = joins
+                    .OrderByDescending(cf => cf.ApplicationId)
+                    .Select(cf => (long?)cf.ApplicationId)
+                    .FirstOrDefault();
+                cursorPos = maxId.HasValue ? maxId.Value + 1 : LastPossiblePos;
+            }
+
+            var paginatedJoins = joins
+                .Where(cf => cf.ApplicationId < cursorPos)
+                .OrderByDescending(cf => cf.ApplicationId)
+                .Take(PageSize)
+                .ToList();
+
+            long newCursorPos = paginatedJoins
+                .Select(cf => (long?)cf.ApplicationId)
+                .ElementAtOrDefault(PageSize - 1) ?? LastPossiblePos;
+
+            var projectedCallsFor = paginatedJoins
+                .Select(cf => new
+                {
+                    cf.Icon,
+                    cf.IconMediaType,
+                    Key = cf.CallForKey,
+                    cf.Title,
+                    cf.PublishDate,
+                    cf.Countries
+                })
+                .ToArray();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    CursorPosition = newCursorPos,
+                    CallsFor = projectedCallsFor
+                },
+                IdRolePair = idRolePair
+            });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    /// <summary>
+    /// GET
+    /// </summary>
     public static async Task ReadAll(
         HttpContext http,
         MovicadContext db,

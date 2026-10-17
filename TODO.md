@@ -43,4 +43,3 @@ esté eliminado; puede tener sentido, ya que en su momento el administrativo cre
 
 
 # temp
-50 min: Se creó y probó la API para descargar archivo del estudiante; se creó y probó la API para ver el perfil propio de estudiante
