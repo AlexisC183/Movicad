@@ -6,6 +6,115 @@ namespace Movicad.Apis;
 
 public static class StudentFiles
 {
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task Read(
+        HttpContext http,
+        MovicadContext db,
+        string key = ""
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative, Roles.Student);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        if (!Converters.TryCompositeKeyToLongs(key, out long applicationId, out long fileRequestId))
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Clave de archivo del estudiante no válida"
+            });
+            return;
+        }
+
+        try
+        {
+            StudentFile? file = db.StudentFiles
+                .SingleOrDefault(file =>
+                    !file.Deleted &&
+                    file.ApplicationId == applicationId &&
+                    file.FileRequestId == fileRequestId
+                );
+            if (file is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            Application? application = db.Applications
+                .SingleOrDefault(appl =>
+                    !appl.Deleted &&
+                    appl.ApplicationId == file.ApplicationId
+                );
+            if (application is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            CallsFor? callFor = db.CallsFors
+                .SingleOrDefault(callFor =>
+                    !callFor.Deleted &&
+                    callFor.CallForId == application.CallForId
+                );
+            if (callFor is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            User? requester = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+            if (requester is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (!(
+                requester.UserId == application.StudentId ||
+                requester.UserId == callFor.AdministrativeId
+            ))
+            {
+                http.Response.StatusCode = 403;
+                await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
+                return;
+            }
+            
+            http.Response.ContentType = file.MediaType;
+            http.Response.Headers.Append(
+                "Content-Disposition",
+                $"attachment; filename={file.Name}"
+            );
+
+            await using Stream stream = new MemoryStream(file.Content);
+            await stream.CopyToAsync(http.Response.Body);
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
+    /// <summary>
+    /// GET
+    /// </summary>
     public static async Task ReadBy(
         HttpContext http,
         MovicadContext db,
@@ -94,7 +203,10 @@ public static class StudentFiles
                     {
                         Req = req,
                         FileMaybe = files
-                            .SingleOrDefault(file => file.ApplicationId == application.ApplicationId)
+                            .SingleOrDefault(file =>
+                                file.ApplicationId == application.ApplicationId &&
+                                !file.Deleted
+                            )
                     }
                 )
                 .Select(e => new

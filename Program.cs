@@ -97,7 +97,10 @@ app.MapPost("/api/sessions/log-in", Sessions.LogIn);
 app.MapGet("/api/sessions/log-out", Sessions.LogOut);
 app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);
 
+app.MapGet("/api/students/me", Students.Read);
+
 app.MapGet("/api/student-files/read", StudentFiles.ReadBy);
+app.MapGet("/api/student-files/read/{key}", StudentFiles.Read);
 app.MapPost("/api/student-files/create", StudentFiles.Create);
 
 app.MapPost("/api/users/create", Users.Create);

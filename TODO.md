@@ -40,3 +40,7 @@ if (
 No es un problema de seguridad, es un detalle que resulta en que el usuario no recibe beneficio alguno al permitirle estas peticiones.
 Esto también puede verse en algunas peticiones GET como a `/api/private-messages/read`: es posible leer las conversaciones privadas con un administrativo aunque
 esté eliminado; puede tener sentido, ya que en su momento el administrativo creó una convocatoria y pudieron enviarse mensajes un estudiante y un administrativo.
+
+
+# temp
+50 min: Se creó y probó la API para descargar archivo del estudiante; se creó y probó la API para ver el perfil propio de estudiante
