@@ -52,6 +52,7 @@ app.MapGet("/test", () =>
     return 0;
 }); //
 
+app.MapGet("/api/administrative-messages/me-as-{entityRole}", AdministrativeMessages.ReadAs);
 app.MapPost("/api/administrative-messages/create", AdministrativeMessages.Create);
 
 app.MapGet("/api/administratives/read", Administratives.ReadAll);

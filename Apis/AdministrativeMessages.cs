@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Movicad.Persistence;
 using Movicad.Utils;
 using System.Security.Cryptography;
@@ -7,6 +8,93 @@ namespace Movicad.Apis;
 
 public static class AdministrativeMessages
 {
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task ReadAs(
+        HttpContext http,
+        MovicadContext db,
+        string entityRole,
+        [FromQuery(Name = "cursor-pos")] long? cursorPosMaybe
+    )
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        if (entityRole is not ("sender" or "recipient"))
+        {
+            http.Response.StatusCode = 400;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "err",
+                Message = "Quiso decir 'sender' o 'recipient'"
+            });
+            return;
+        }
+
+        const long LastPossiblePos = 1;
+        const int PageSize = 20;
+
+        try
+        {
+            User? admin = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+
+            if (admin is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            var filteredMsgs = entityRole == "sender"
+            ?
+                db.AdministrativeMessages
+                    .Where(msg =>
+                        msg.SenderId == admin.UserId &&
+                        !msg.Deleted
+                    )
+            :
+                db.AdministrativeMessages
+                    .Where(msg =>
+                        msg.RecipientId == admin.UserId &&
+                        !msg.Deleted
+                    );
+            var msgAdminJoins = entityRole == "sender"
+            ?
+                filteredMsgs
+                    .Join(
+                        db.Administratives,
+                        msg => msg.RecipientId,
+                        admin => admin.UserId,
+                        (msg, admin) => new { msg, admin }
+                    )
+            :
+                filteredMsgs
+                    .Join(
+                        db.Administratives,
+                        msg => msg.SenderId,
+                        admin => admin.UserId,
+                        (msg, admin) => new { msg, admin }
+                    );
+      
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
+
     public record CreateReq(
         string Key,
         string Subject,
