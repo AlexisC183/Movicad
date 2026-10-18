@@ -1,5 +1,5 @@
 # TODO
-AdministrativeMessages.ReadAs
+
 All GET APIs
 
 
@@ -7,7 +7,7 @@ All GET APIs
 
 
 # TEST
-
+AdministrativeMessages.ReadAs
 
 # Código descartado
 ## Comprobando cuota de archivos subidos a un foro antes de crear la instancia de ForumFile
@@ -43,3 +43,4 @@ esté eliminado; puede tener sentido, ya que en su momento el administrativo cre
 
 
 # temp
+Did: 29 min
