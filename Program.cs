@@ -68,6 +68,7 @@ app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 app.MapPatch("/api/calls-for/update", CallForDelegates.Update);
 app.MapDelete("/api/calls-for/delete", CallForDelegates.Delete);
 
+app.MapGet("/api/expulsion-reasons/read-by-student", ExpulsionReasons.ReadByStudent);
 app.MapPost("/api/expulsion-reasons/create", ExpulsionReasons.Create);
 
 app.MapPost("/api/file-requests/create", FileRequests.Create);
