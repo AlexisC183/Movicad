@@ -10,6 +10,19 @@ public static class ExpulsionReasons
     /// <summary>
     /// GET
     /// </summary>
+    public static async Task LastExpulsionReason(
+        HttpContext http,
+        MovicadContext db,
+        string callForKey = "",
+        string studentKey = ""
+    )
+    {
+        
+    }
+
+    /// <summary>
+    /// GET
+    /// </summary>
     public static async Task ReadByStudent(
         HttpContext http,
         MovicadContext db,

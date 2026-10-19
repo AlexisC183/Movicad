@@ -70,6 +70,7 @@ app.MapGet("/api/calls-for/read-by-student", CallForDelegates.ReadByStudent);
 app.MapPost("/api/calls-for/create", CallForDelegates.Create);
 app.MapPatch("/api/calls-for/update", CallForDelegates.Update);
 app.MapDelete("/api/calls-for/delete", CallForDelegates.Delete);
+app.MapGet("/api/calls-for/{callForKey}/students/{studentKey}/last-expulsion-reason", ExpulsionReasons.LastExpulsionReason);
 
 app.MapGet("/api/expulsion-reasons/read-by-student", ExpulsionReasons.ReadByStudent);
 app.MapPost("/api/expulsion-reasons/create", ExpulsionReasons.Create);

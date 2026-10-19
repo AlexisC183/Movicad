@@ -1,5 +1,5 @@
 # TODO
-
+ExpulsionReasons.LastExpulsionReason
 All GET APIs
 
 
@@ -43,4 +43,3 @@ esté eliminado; puede tener sentido, ya que en su momento el administrativo cre
 
 
 # temp
-Did: 29 min
