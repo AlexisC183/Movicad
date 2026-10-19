@@ -103,6 +103,7 @@ app.MapGet("/api/sessions/log-out", Sessions.LogOut);
 app.MapGet("/api/sessions/verify-session", Sessions.VerifySession);
 
 app.MapGet("/api/students/me", Students.Read);
+app.MapGet("/api/students/read", Students.ReadBy);
 
 app.MapGet("/api/student-files/read", StudentFiles.ReadBy);
 app.MapGet("/api/student-files/read/{key}", StudentFiles.Read);

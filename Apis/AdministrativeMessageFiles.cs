@@ -22,6 +22,8 @@ public static class AdministrativeMessageFiles
             return;
         }
 
+        string trimmedKey = key.Trim();
+
         try
         {
             User? requester = db.Users.SingleOrDefault(user =>
@@ -40,7 +42,7 @@ public static class AdministrativeMessageFiles
             }
 
             AdministrativeMessageFile? file = db.AdministrativeMessageFiles
-                .SingleOrDefault(file => file.Key == key);
+                .SingleOrDefault(file => file.Key == trimmedKey);
 
             if (file is null)
             {
