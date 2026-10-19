@@ -17,7 +17,89 @@ public static class ExpulsionReasons
         string studentKey = ""
     )
     {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        string trimmedStudentKey = studentKey.Trim();
+        string trimmedCallForKey = callForKey.Trim();
         
+        try
+        {
+            User? student = db.Users.SingleOrDefault(user =>
+                user.Key == trimmedStudentKey &&
+                !user.Deleted
+            );
+            CallsFor? callFor = db.CallsFors.SingleOrDefault(callFor =>
+                callFor.Key == trimmedCallForKey &&
+                !callFor.Deleted
+            );
+            if (student is null || callFor is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            Application? application = db.Applications
+                .SingleOrDefault(appl =>
+                    appl.StudentId == student.UserId &&
+                    appl.CallForId == callFor.CallForId &&
+                    appl.Banned
+                );
+            if (application is null)
+            {
+                http.Response.StatusCode = 404;
+                await http.Response.WriteAsJsonAsync(new { Status = "not_found" });
+                return;
+            }
+
+            User? requester = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+            if (requester is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            if (requester.UserId != callFor.AdministrativeId)
+            {
+                http.Response.StatusCode = 403;
+                await http.Response.WriteAsJsonAsync(new { Status = "forbidden" });
+                return;
+            }
+
+            var lastExpulsionReason = db.ExpulsionReasons
+                .Where(reason => reason.ApplicationId == application.ApplicationId)
+                .OrderByDescending(reason => reason.ExpulsionReasonId)
+                .First();
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    lastExpulsionReason.Content,
+                    lastExpulsionReason.Creation
+                },
+                IdRolePair = idRolePair
+            });
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
     }
 
     /// <summary>
