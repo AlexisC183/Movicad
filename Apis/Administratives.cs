@@ -242,4 +242,99 @@ public static class Administratives
             await http.Response.DbErr(e);
         }
     }
+
+    /// <summary>
+    /// GET
+    /// </summary>
+    public static async Task Dashboard(HttpContext http, MovicadContext db)
+    {
+        IdRolePair? idRolePair = await http.VerifyClaimsAsync(Roles.Administrative);
+
+        if (idRolePair is null)
+        {
+            return;
+        }
+
+        try
+        {
+            User? admin = db.Users.SingleOrDefault(user =>
+                user.Key == idRolePair.Id &&
+                !user.Deleted
+            );
+            if (admin is null)
+            {
+                http.Response.StatusCode = 401;
+                await http.Response.WriteAsJsonAsync(new
+                {
+                    Status = "err",
+                    Message = "Su cuenta ha sido eliminada. No se puede proseguir."
+                });
+                return;
+            }
+
+            DateTime now = DateTime.UtcNow;
+
+            Task<long> openCallForCountTask = db.CallsFors
+                .Select(cf => new CallsFor()
+                {
+                    CallForId = cf.CallForId,
+                    Key = cf.Key,
+                    Title = cf.Title,
+                    InitialDate = cf.InitialDate == null
+                    ?
+                        new(DateTime.MinValue.Ticks, DateTimeKind.Utc)
+                    :
+                        cf.InitialDate,
+                    FinalDate = cf.FinalDate == null
+                    ?
+                        new(DateTime.MaxValue.Ticks, DateTimeKind.Utc)
+                    :
+                        cf.FinalDate,
+                    Description = cf.Description,
+                    Requirements = cf.Requirements,
+                    PublishDate = cf.PublishDate,
+                    Modification = cf.Modification,
+                    AdministrativeId = cf.AdministrativeId,
+                    Deleted = cf.Deleted
+                })
+                .Where(cf =>
+                    !cf.Deleted &&
+                    cf.AdministrativeId == admin.UserId &&
+                    now >= cf.InitialDate &&
+                    now <= cf.FinalDate
+                )
+                .LongCountAsync();
+            
+            Task<long> callForCountTask = db.CallsFors
+                .Where(cf =>
+                    !cf.Deleted &&
+                    cf.AdministrativeId == admin.UserId
+                )
+                .LongCountAsync();
+
+            Task<long> callForHistoryCountTask = db.CallsFors
+                .Where(cf => cf.AdministrativeId == admin.UserId)
+                .LongCountAsync();
+
+            Task<long?> applicantCountTask = db.CallsFors
+                .Where(cf =>
+                    !cf.Deleted &&
+                    cf.AdministrativeId == admin.UserId
+                )
+                .GroupJoin(
+                    db.Applications.Where(appl => !appl.Deleted),
+                    cf => cf.CallForId,
+                    appl => appl.CallForId,
+                    (cf, appls) => new { cf, appls }
+                )
+                .Select(jn => (long?)jn.appls.LongCount())
+                .SumAsync();
+
+            
+        }
+        catch (Exception e)
+        {
+            await http.Response.DbErr(e);
+        }
+    }
 }
