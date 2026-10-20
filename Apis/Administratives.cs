@@ -274,7 +274,7 @@ public static class Administratives
 
             DateTime now = DateTime.UtcNow;
 
-            Task<long> openCallForCountTask = db.CallsFors
+            long openCallForCount = await db.CallsFors
                 .Select(cf => new CallsFor()
                 {
                     CallForId = cf.CallForId,
@@ -304,19 +304,19 @@ public static class Administratives
                     now <= cf.FinalDate
                 )
                 .LongCountAsync();
-            
-            Task<long> callForCountTask = db.CallsFors
+
+            long callForCount = await db.CallsFors
                 .Where(cf =>
                     !cf.Deleted &&
                     cf.AdministrativeId == admin.UserId
                 )
                 .LongCountAsync();
 
-            Task<long> callForHistoryCountTask = db.CallsFors
+            long callForHistoryCount = await db.CallsFors
                 .Where(cf => cf.AdministrativeId == admin.UserId)
                 .LongCountAsync();
 
-            Task<long?> applicantCountTask = db.CallsFors
+            var cfApplsQuery = db.CallsFors
                 .Where(cf =>
                     !cf.Deleted &&
                     cf.AdministrativeId == admin.UserId
@@ -326,11 +326,37 @@ public static class Administratives
                     cf => cf.CallForId,
                     appl => appl.CallForId,
                     (cf, appls) => new { cf, appls }
-                )
-                .Select(jn => (long?)jn.appls.LongCount())
-                .SumAsync();
+                );
 
-            
+            long applicantCount = await cfApplsQuery
+                .Select(jn => (long?)jn.appls.LongCount())
+                .SumAsync() ?? 0;
+
+            double applicantAverage = await cfApplsQuery
+                .Select(jn => (double?)jn.appls.LongCount())
+                .AverageAsync() ?? 0.0;
+
+            long moreThanOneCallForApplicantCount = await cfApplsQuery
+                .SelectMany(jn => jn.appls)
+                .GroupBy(appl => appl.StudentId)
+                .Select(g => g.LongCount())
+                .LongCountAsync(cnt => cnt > 1);
+
+            http.Response.StatusCode = 200;
+            await http.Response.WriteAsJsonAsync(new
+            {
+                Status = "ok",
+                Data = new
+                {
+                    OpenCallsFor = openCallForCount,
+                    ActiveCallsFor = callForCount,
+                    CallForHistory = callForHistoryCount,
+                    Applicants = applicantCount,
+                    ApplicantAverage = applicantAverage,
+                    MoreThanOneCallForApplicants = moreThanOneCallForApplicantCount
+                },
+                IdRolePair = idRolePair
+            });
         }
         catch (Exception e)
         {
