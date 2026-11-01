@@ -3,6 +3,8 @@ Funcionalidades compartidas:
 
 Ver resto de contenidos de una convocatoria: Este requerimiento significa que toda la información generada por el administrador de una convocatoria debe poder consultarse por todos los participantes las veces que hagan falta, ya sea al visualizar la página de la convocatoria o accediendo al foro de discusión de la misma.
 
+FileRequests.Update
+FileRequests.Delete
 
 # FIXME
 
